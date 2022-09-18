@@ -9,8 +9,8 @@ import (
 
 	"context"
 
+	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/pkg/errors"
-	"github.com/tak1827/blockchain-tps-test/tps"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/crypto/sha3"

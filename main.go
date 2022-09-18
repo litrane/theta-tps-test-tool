@@ -7,7 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tak1827/blockchain-tps-test/tps"
+	"github.com/blockchain-tps-test/samples/theta/tps"
+	"github.com/thetatoken/theta/common"
 )
 
 const (
@@ -20,8 +21,8 @@ var (
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
-	queueSize        = 50               //队列大小
-	concurrency      = 5                //并发数量
+	queueSize        = 50                //队列大小
+	concurrency      = 1                 //并发数量
 	queue            = tps.NewQueue(queueSize)
 	closing          uint32
 	tpsClosing       uint32
@@ -41,9 +42,14 @@ var (
 	addr_priv     = make(map[string]string, len(privs))
 	erc721address = "0x0000000000000000000000000000000000000009"
 	client        EthClient
+	txMap         map[common.Hash]time.Time
+	elapsedTime   time.Duration
+	avgLatency    time.Duration
 )
 
 func main() {
+	txMap = make(map[common.Hash]time.Time)
+
 	// client := jsonrpc.NewRPCClient("http://localhost:16888/rpc")
 	// // res, err := client1.BlockNumber(context.Background())
 	// rpcRes, rpcErr := client.Call("theta.GetBlockByHeight", trpc.GetBlockByHeightArgs{
@@ -60,7 +66,6 @@ func main() {
 	// block, err:= client.BlockByNumber(context.Background(), big.NewInt(int64(378)))
 	// fmt.Println(err)
 	// fmt.Println(len(block.Transactions()))
-
 	go func() {
 		//停止发送交易时间
 		defer atomic.AddUint32(&closing, 1)
@@ -81,10 +86,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
-	ethStressTest(&client, ctx)
-
+	go ethStressTest(&client, ctx)
+	fmt.Println("-----------Start Measuring----------")
 	if err = tps.StartTPSMeasuring(context.Background(), &client, &tpsClosing, &idlingDuration, logger); err != nil {
 		fmt.Println("err StartTPSMeasuring:", err)
 		logger.Fatal("err StartTPSMeasuring: ", err)
 	}
+
 }

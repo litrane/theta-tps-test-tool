@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/pkg/errors"
-	"github.com/tak1827/blockchain-tps-test/tps"
 )
 
 const (

@@ -12,23 +12,24 @@ import (
 
 func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDuration *uint32, logger Logger) error {
 	var (
-		idling    = true
-		startedAd time.Time
-		total     int
-		count     int
-		lastBlock uint64
-		err       error
+		idling      = true
+		startedAd   time.Time
+		total       int
+		count       int
+		lastBlock   uint64
+		err         error
+		avg_latency time.Duration
 	)
 
 	for {
 		if atomic.LoadUint32(closing) == 1 {
 			break
 		}
-
-		if count, lastBlock, err = countTx(ctx, client, lastBlock); err != nil {
+		if count, lastBlock, avg_latency, err = countTx(ctx, client, lastBlock); err != nil {
 			if errors.Is(err, ErrNotNewBlock) {
 				// sleep a bit
-				time.Sleep(1 * time.Second)
+				//time.Sleep(1 * time.Second)
+				logger.Warn("ErrNotNewBlock")
 				continue
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -57,25 +58,25 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		total += count
 		elapsed := time.Now().Sub(startedAd).Seconds()
 		fmt.Print("------------------------------------------------------------------------------------\n")
-		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx)
+		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%d)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, avg_latency)
 	}
 
 	return nil
 }
 
-func countTx(ctx context.Context, client Client, lastBlock uint64) (int, uint64, error) {
+func countTx(ctx context.Context, client Client, lastBlock uint64) (int, uint64, time.Duration, error) {
 	height, err := client.LatestBlockHeight(ctx)
 	if err != nil {
-		return 0, lastBlock, errors.Wrap(err, "err LatestBlockHeight")
+		return 0, lastBlock, time.Duration(0), errors.Wrap(err, "err LatestBlockHeight")
 	}
 	if height <= lastBlock {
-		return 0, lastBlock, ErrNotNewBlock
+		return 0, lastBlock, time.Duration(0), ErrNotNewBlock
 	}
 
-	count, err := client.CountTx(ctx, height)
+	count, avg_latency, err := client.CountTx(ctx, height)
 	if err != nil {
-		return 0, lastBlock, errors.Wrap(err, "err TxCount")
+		return 0, lastBlock, time.Duration(0), errors.Wrap(err, "err TxCount")
 	}
 
-	return count, height, nil
+	return count, height, avg_latency, nil
 }
