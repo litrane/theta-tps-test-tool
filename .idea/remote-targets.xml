@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <option name="projectDefaultTargetUuid" value="0594b360-83b9-4dc8-8cd9-bce7f683e82c" />
+    <targets>
+      <target name="WSL - Ubuntu-20.04" type="wsl" uuid="0594b360-83b9-4dc8-8cd9-bce7f683e82c">
+        <config>
+          <option name="distributionMsId" value="Ubuntu-20.04" />
+          <option name="projectRootOnTarget" value="/mnt/e/goland/GoLand 2022.2.2/jbr/bin&#10;/theta" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="goPath" value="/home/dd/go" />
+            <option name="goRoot" value="/usr/local/go/bin/go" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>
