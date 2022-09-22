@@ -1,6 +1,7 @@
 package tps
 
 import (
+	"fmt"
 	"log"
 	"sync/atomic"
 )
@@ -49,6 +50,7 @@ func (w *Worker) Run(queue *Queue, id int) {
 			log.Fatal("err doTaskFunc", err)
 		}
 	}
+	defer fmt.Println(id, " is done")
 }
 
 func (w *Worker) Close() {

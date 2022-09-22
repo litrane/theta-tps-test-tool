@@ -69,7 +69,11 @@ func ethStressTest(client *EthClient, ctx context.Context) {
 		)
 		if err = task.Do(ctx, client, priv, currentNonce, &queue, logger, ""); err != nil {
 			if errors.Is(err, tps.ErrWrongNonce) {
-
+				return nil
+			} else if errors.Is(err, tps.ErrTaskRetry) {
+				wallet.RecetNonce(priv, wallet.IncrementNonce(priv))
+				return nil
+			} else if errors.Is(err, tps.NonceWrong) {
 				pri, _ := hex.DecodeString(priv)
 				thetaPrivateKey, _ := crypto.PrivateKeyFromBytes(pri)
 
@@ -77,15 +81,7 @@ func ethStressTest(client *EthClient, ctx context.Context) {
 				if err != nil {
 					return errors.Wrap(err, "debug")
 				}
-				fmt.Println("need", nonce)
-				fmt.Println(wallet.CurrentNonce(priv))
 				wallet.RecetNonce(priv, nonce.Current())
-				fmt.Println(wallet.CurrentNonce(priv))
-				task.tryCount = 0
-				queue.Push(task)
-				return nil
-			} else if errors.Is(err, tps.ErrTaskRetry) {
-				wallet.RecetNonce(priv, wallet.CurrentNonce(priv))
 				return nil
 			}
 			return errors.Wrap(err, "err Do")

@@ -57,6 +57,9 @@ func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce 
 		if err := t.IncrementTryCount(); err != nil {
 			return errors.Wrap(rootErr, err.Error())
 		}
+		// if strings.Contains(rootErr.Error(), "ValidateInputAdvanced:"){
+		// 	return tps.NonceWrong
+		// }
 		return tps.ErrWrongNonce
 		queue.Push(t)
 		return nil

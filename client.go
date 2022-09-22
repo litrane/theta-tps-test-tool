@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -105,7 +106,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 	}
 
 	var objmap map[string]json.RawMessage
-	elapsedTime = 0
+	var elapsedTime time.Duration
 	json.Unmarshal(jsonBytes, &objmap)
 	if objmap["transactions"] != nil {
 		var txmaps []map[string]json.RawMessage
@@ -114,8 +115,11 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
 				result += 1
 			} else if types.TxType(trpcResult.Txs[i].Type) == types.TxSend {
+				mutex.Lock()
 				startTime := txMap[trpcResult.Txs[i].Hash]
-				elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
+				mutex.Unlock()
+				elapsedTime = elapsedTime + time.Since(startTime)/time.Second
+				//fmt.Println(elapsedTime)
 				result += 1
 			}
 		}
@@ -123,9 +127,11 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 	if result != 0 {
 		avgLatency = elapsedTime / time.Duration(result)
 	}
+	//fmt.Println(avgLatency)
 	return result, avgLatency, nil
 }
 func (c EthClient) CountTx(ctx context.Context, height uint64) (int, time.Duration, error) {
+	startTime := time.Now()
 	rpcResult, err := c.rpcClient.Call("theta.GetBlockByHeight", rpc.GetBlockByHeightArgs{
 		Height: common.JSONUint64(height)})
 	if err != nil {
@@ -136,6 +142,8 @@ func (c EthClient) CountTx(ctx context.Context, height uint64) (int, time.Durati
 
 	//logger.Infof("HandleThetaRPCResponse, jsonBytes: %v", strin(jsonBytes))
 	result, avg_latency, err := parse(jsonBytes)
+	totalTime := time.Since(startTime) / time.Millisecond
+	fmt.Println("call and parse consume ", totalTime)
 	return result, avg_latency, nil
 }
 
@@ -196,7 +204,7 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	// }
 	// fmt.Println("transaction sent. txid: ", signedtx.Hash().Hex(), "nonce: ", nonce)
 	//wallet, address, err := tx.SoftWalletUnlock("/home/dd/.thetacli", "2E833968E5bB786Ae419c4d13189fB081Cc43bab", "qwertyuiop")
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	privateKey, err := crypto.HexToECDSA(privHex)
 	pri, err := hex.DecodeString(privHex)
 	thetaPrivateKey, err := crypto.PrivateKeyFromBytes(pri)
@@ -253,7 +261,6 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	signedTx := hex.EncodeToString(raw)
 	var res *jsonrpc.RPCResponse
 	res, err = c.rpcClient.Call("theta.BroadcastRawTransactionAsync", rpc.BroadcastRawTransactionArgs{TxBytes: signedTx})
-	time.Sleep(1 * time.Millisecond)
 	if err != nil {
 		return common.BytesToHash(nil), err
 		log.Fatalln("Failed to broadcast transaction: %v\n", err)
@@ -274,6 +281,9 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 		log.Fatalln("Failed to parse server response: %v\n", err)
 	}
 	//fmt.Printf("Successfully broadcasted transaction:\n%s\n", formatted)
-	txMap[common.HexToHash(result.TxHash)] = time.Now()
+	startTime := time.Now()
+	mutex.Lock()
+	txMap[common.HexToHash(result.TxHash)] = startTime
+	mutex.Unlock()
 	return common.BytesToHash(formatted), err
 }

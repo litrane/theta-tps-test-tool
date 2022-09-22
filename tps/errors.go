@@ -10,4 +10,5 @@ var (
 	ErrTxFailed    = errors.New("transaction is failed")
 	ErrWrongNonce  = errors.New("transaction nonce is not correct")
 	ErrNotNewBlock = errors.New("new block have not yet mind")
+	NonceWrong =errors.New("Nonce should be updated")
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,8 +22,8 @@ var (
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
-	queueSize        = 50                //队列大小
-	concurrency      = 1                 //并发数量
+	queueSize        = 10000000          //队列大小
+	concurrency      = 5                 //并发数量
 	queue            = tps.NewQueue(queueSize)
 	closing          uint32
 	tpsClosing       uint32
@@ -43,8 +44,9 @@ var (
 	erc721address = "0x0000000000000000000000000000000000000009"
 	client        EthClient
 	txMap         map[common.Hash]time.Time
-	elapsedTime   time.Duration
-	avgLatency    time.Duration
+
+	avgLatency time.Duration
+	mutex      sync.Mutex
 )
 
 func main() {

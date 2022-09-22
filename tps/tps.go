@@ -29,7 +29,7 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 			if errors.Is(err, ErrNotNewBlock) {
 				// sleep a bit
 				//time.Sleep(1 * time.Second)
-				logger.Warn("ErrNotNewBlock")
+				//logger.Warn("ErrNotNewBlock")
 				continue
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
