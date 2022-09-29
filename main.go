@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -10,11 +11,13 @@ import (
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
 const (
 	ERC721 = "erc721"
 	EHT    = "eth"
+	Cross  = "CrossChainTNT20"
 )
 
 var (
@@ -23,7 +26,7 @@ var (
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
 	queueSize        = 10000000          //队列大小
-	concurrency      = 5                 //并发数量
+	concurrency      = 1                 //并发数量
 	queue            = tps.NewQueue(queueSize)
 	closing          uint32
 	tpsClosing       uint32
@@ -38,15 +41,19 @@ var (
 		"8888888888888888888888888888888888888888888888888888888888888888",
 	}
 
-	model = ERC721 //压测类型
+	model = Cross //压测类型
 
 	addr_priv     = make(map[string]string, len(privs))
 	erc721address = "0x0000000000000000000000000000000000000009"
 	client        EthClient
 	txMap         map[common.Hash]time.Time
 
-	avgLatency time.Duration
-	mutex      sync.Mutex
+	avgLatency       time.Duration
+	mutex            sync.Mutex
+	CountNum         int
+	chainID          = big.NewInt(360777)
+	Erc20Address     = ""
+	TokenBankAddress = "0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"
 )
 
 func main() {
@@ -80,17 +87,34 @@ func main() {
 		time.Sleep(mesuringDuration * 2)
 	}()
 
-	client, err := NewClient(Endpoint)
+	var client EthClient
+	var err error
+	if model == "CrossChainTNT20" {
+		client, err = NewClient("http://localhost:17900/rpc")
+	} else {
+		client, err = NewClient(Endpoint)
+	}
+
 	if err != nil {
 		logger.Fatal("err NewClient: ", err)
 	}
 	//fmt.Println(client.CountTx(context.Background(), 3847))
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-
-	go ethStressTest(&client, ctx)
+	if model == "ERC20" {
+		erc20StressTest(&client, ctx)
+	} else if model == "CrossChainTNT20" {
+		crossChainTNT20StressTest(&client, ctx)
+	} else {
+		ethStressTest(&client, ctx)
+	}
+	var newclient EthClient
+	if model == "CrossChainTNT20" {
+		newclient, err = NewClient("http://localhost:17900/rpc")
+		newclient.client, err = ethclient.Dial("http://localhost:19988/rpc")
+	}
 	fmt.Println("-----------Start Measuring----------")
-	if err = tps.StartTPSMeasuring(context.Background(), &client, &tpsClosing, &idlingDuration, logger); err != nil {
+	if err = tps.StartTPSMeasuring(context.Background(), &newclient, &tpsClosing, &idlingDuration, logger); err != nil {
 		fmt.Println("err StartTPSMeasuring:", err)
 		logger.Fatal("err StartTPSMeasuring: ", err)
 	}

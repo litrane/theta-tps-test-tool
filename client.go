@@ -19,13 +19,17 @@ import (
 	"github.com/thetatoken/theta/rpc"
 	"github.com/ybbus/jsonrpc"
 
+	ct "github.com/blockchain-tps-test/samples/theta/accessors"
 	"github.com/thetatoken/theta/core"
+	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
 var (
 	_ tps.Client = (*EthClient)(nil)
 )
+var dec18, _ = new(big.Int).SetString("1000000000000000000", 10)
+var crossChainFee = new(big.Int).Mul(big.NewInt(10), dec18)
 
 type EthClient struct {
 	client    *ethclient.Client
@@ -33,7 +37,12 @@ type EthClient struct {
 }
 
 func NewClient(url string) (c EthClient, err error) {
-	c.client, err = ethclient.Dial("http://localhost:18888/rpc")
+	if model == "CrossChainTNT20" {
+		c.client, err = ethclient.Dial("http://localhost:19888/rpc")
+	} else {
+		c.client, err = ethclient.Dial("http://localhost:18888/rpc")
+	}
+
 	if err != nil {
 		return
 	}
@@ -113,6 +122,10 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 		json.Unmarshal(objmap["transactions"], &txmaps)
 		for i, _ := range txmaps {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
+				mutex.Lock()
+				startTime := txMap[trpcResult.Txs[i].Hash]
+				mutex.Unlock()
+				elapsedTime = elapsedTime + time.Since(startTime)/time.Second
 				result += 1
 			} else if types.TxType(trpcResult.Txs[i].Type) == types.TxSend {
 				mutex.Lock()
@@ -285,5 +298,111 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	mutex.Lock()
 	txMap[common.HexToHash(result.TxHash)] = startTime
 	mutex.Unlock()
+	CountNum += 1
+	if CountNum%100 == 0 {
+		fmt.Println("already send ", CountNum)
+	}
 	return common.BytesToHash(formatted), err
+}
+func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce uint64, to string, value int64, erc20address string, tokenAmount int) (common.Hash, error) {
+
+	privateKey, err := crypto.HexToECDSA(privHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+
+	fromAddress := pubkeyToAddress(*publicKeyECDSA)
+	erc20Instance, err := ct.NewTNT20VoucherContract(common.HexToAddress(erc721address), c.client)
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+
+	// gas price
+	gasPrice := c.getGasPriceSuggestion(ctx)
+	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
+	// address
+	toAddress := common.HexToAddress(to)
+
+	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)
+	// auth.Value = big.NewInt(20000000000000000000) // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = &gasPrice
+
+	res, err := erc20Instance.TransferFrom(auth, fromAddress, toAddress, big.NewInt(int64(tokenAmount)))
+
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+
+	return res.Hash(), nil
+}
+func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
+
+	privateKey, err := crypto.HexToECDSA(privHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+
+	fromAddress := pubkeyToAddress(*publicKeyECDSA)
+	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337")
+	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
+	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+	// gas price
+	gasPrice := c.getGasPriceSuggestion(ctx)
+	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
+	// address
+	//toAddress := common.HexToAddress(to)
+
+	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = common.Big0
+	// auth.Value = big.NewInt(20000000000000000000) // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = &gasPrice
+
+	subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
+
+	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = crossChainFee
+	time.Sleep(1 * time.Second)
+	fmt.Println(subchainTNT20Instance.Allowance(nil, fromAddress, common.HexToAddress(contractAddress)))
+
+	fmt.Println()
+	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(360888), subchainTNT20Address, fromAddress, big.NewInt(1))
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if receipt.Status != 1 {
+		log.Fatal("lock error")
+	}
+	fmt.Println("success")
+	return res.Hash(), nil
 }
