@@ -404,5 +404,13 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 		log.Fatal("lock error")
 	}
 	fmt.Println("success")
+	startTime := time.Now()
+	mutex.Lock()
+	txMap[res.Hash()] = startTime
+	mutex.Unlock()
+	CountNum += 1
+	if CountNum%100 == 0 {
+		fmt.Println("already send ", CountNum)
+	}
 	return res.Hash(), nil
 }
