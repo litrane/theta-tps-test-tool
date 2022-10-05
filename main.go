@@ -54,11 +54,14 @@ var (
 	chainID          = big.NewInt(360777)
 	Erc20Address     = ""
 	TokenBankAddress = "0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"
+	countChainTx1    = 0
+	countChainTx2    = 0
+	txMapCrossChain  map[int]time.Time
 )
 
 func main() {
 	txMap = make(map[common.Hash]time.Time)
-
+	txMapCrossChain = make(map[int]time.Time)
 	// client := jsonrpc.NewRPCClient("http://localhost:16888/rpc")
 	// // res, err := client1.BlockNumber(context.Background())
 	// rpcRes, rpcErr := client.Call("theta.GetBlockByHeight", trpc.GetBlockByHeightArgs{
@@ -105,6 +108,8 @@ func main() {
 		erc20StressTest(&client, ctx)
 	} else if model == "CrossChainTNT20" {
 		crossChainTNT20StressTest(&client, ctx)
+	} else if model == "CrossSubChainTNT20" {
+		crossSubChainTNT20StressTest(&client, ctx)
 	} else {
 		ethStressTest(&client, ctx)
 	}

@@ -45,6 +45,8 @@ func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce 
 		_, rootErr = client.Erc20TransferFrom(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
 	} else if model=="CrossChainTNT20"{
 		_, rootErr = client.CrossChainTNT20Transfer(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
+	} else if model=="CrossSubChainTNT20"{
+		_, rootErr = client.CrossSubChainTNT20Transfer(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
 	} else {
 		_, rootErr = client.SendTx(ctx, priv, nonce, t.to, t.amount)
 	}

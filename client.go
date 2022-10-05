@@ -39,6 +39,8 @@ type EthClient struct {
 func NewClient(url string) (c EthClient, err error) {
 	if model == "CrossChainTNT20" {
 		c.client, err = ethclient.Dial("http://localhost:19888/rpc")
+	} else if model == "CrossSubChainTNT20" {
+		c.client, err = ethclient.Dial("http://localhost:19888/rpc")
 	} else {
 		c.client, err = ethclient.Dial("http://localhost:18888/rpc")
 	}
@@ -123,7 +125,8 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 		for i, _ := range txmaps {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
 				mutex.Lock()
-				startTime := txMap[trpcResult.Txs[i].Hash]
+				startTime := txMapCrossChain[countChainTx2]
+				countChainTx2 += 1
 				mutex.Unlock()
 				elapsedTime = elapsedTime + time.Since(startTime)/time.Second
 				result += 1
@@ -304,6 +307,51 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	}
 	return common.BytesToHash(formatted), err
 }
+const RawABI = `[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "List",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "receiver",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "values",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "Value",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "values",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]`
 func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce uint64, to string, value int64, erc20address string, tokenAmount int) (common.Hash, error) {
 
 	privateKey, err := crypto.HexToECDSA(privHex)
@@ -400,6 +448,77 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	if err != nil {
 		log.Fatal(err)
 	}
+	if receipt.Status != 1 {
+		log.Fatal("lock error")
+	}
+	// fmt.Println("success")
+	fmt.Println(receipt.Logs)
+	fmt.Println(receipt.Logs[2].Data)
+	startTime := time.Now()
+	mutex.Lock()
+	txMapCrossChain[countChainTx1] = startTime
+	countChainTx1 += 1
+	mutex.Unlock()
+	CountNum += 1
+	if CountNum%100 == 0 {
+		fmt.Println("already send ", CountNum)
+	}
+	return res.Hash(), nil
+}
+func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
+
+	privateKey, err := crypto.HexToECDSA(privHex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+
+	fromAddress := pubkeyToAddress(*publicKeyECDSA)
+	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337")
+	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
+	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+	// gas price
+	gasPrice := c.getGasPriceSuggestion(ctx)
+	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
+	// address
+	//toAddress := common.HexToAddress(to)
+
+	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = common.Big0
+	// auth.Value = big.NewInt(20000000000000000000) // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = &gasPrice
+
+	subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
+
+	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = crossChainFee
+	time.Sleep(1 * time.Second)
+	fmt.Println(subchainTNT20Instance.Allowance(nil, fromAddress, common.HexToAddress(contractAddress)))
+
+	fmt.Println()
+	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(366), subchainTNT20Address, fromAddress, big.NewInt(1))
+	if err != nil {
+		return common.BytesToHash([]byte("")), err
+	}
+	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(receipt.Logs)
 	if receipt.Status != 1 {
 		log.Fatal("lock error")
 	}
