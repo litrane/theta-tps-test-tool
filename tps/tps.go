@@ -3,6 +3,7 @@ package tps
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -19,8 +20,11 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		lastBlock   uint64
 		err         error
 		avg_latency time.Duration
+		latency_num int
+		latency_sum *big.Int
 	)
-
+	latency_num=0
+	latency_sum=big.NewInt(0)
 	for {
 		if atomic.LoadUint32(closing) == 1 {
 			break
@@ -56,9 +60,11 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		// NextIdlingDuration(idlingDuration, uint32(count), uint32(pendingTx))
 
 		total += count
+		latency_num+=1
+		latency_sum.Add(big.NewInt(int64(avg_latency)),latency_sum)
 		elapsed := time.Now().Sub(startedAd).Seconds()
 		fmt.Print("------------------------------------------------------------------------------------\n")
-		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%d)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, avg_latency)
+		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%d)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, big.NewInt(0).Div(latency_sum,big.NewInt(int64(latency_num))).Int64())
 	}
 
 	return nil

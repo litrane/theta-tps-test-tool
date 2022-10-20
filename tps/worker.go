@@ -41,7 +41,6 @@ func (w *Worker) Run(queue *Queue, id int) {
 		if atomic.LoadUint32(&w.closing) == 1 {
 			break
 		}
-
 		task, isEmpty := queue.Shift()
 		if isEmpty {
 			continue

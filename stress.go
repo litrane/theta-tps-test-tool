@@ -28,7 +28,7 @@ func pubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := crypto.FromECDSAPub(&p)
 	return common.BytesToAddress(keccak256(pubBytes[1:])[12:])
 }
-func ethStressTest(client *EthClient, ctx context.Context) {
+func ethStressTest(client *[]EthClient, ctx context.Context) {
 
 	addrs := make([]string, len(privs))
 	for i := range privs {
@@ -47,11 +47,15 @@ func ethStressTest(client *EthClient, ctx context.Context) {
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
 		addrs[i] = fromAddress.Hex()
+		fmt.Println("fromAddress: ", fromAddress.Hex(), privs)
 	}
-
-	wallet, err := tps.NewWallet(ctx, client, privs, addrs)
-	if err != nil {
-		logger.Fatal("err NewWallet: ", err)
+	var wallet_list []tps.Wallet
+	for i := 0; i < client_number; i++ {
+		wallet_single, err := tps.NewWallet(ctx, (*client)[i], privs, addrs)
+		if err != nil {
+			logger.Fatal("err NewWallet: ", err)
+		}
+		wallet_list = append(wallet_list, wallet_single)
 	}
 
 	taskDo := func(t tps.Task, id int) error {
@@ -64,24 +68,24 @@ func ethStressTest(client *EthClient, ctx context.Context) {
 		defer cancel()
 
 		var (
-			priv         = wallet.Priv(id)
-			currentNonce = wallet.IncrementNonce(priv)
+			priv         = wallet_list[id].Priv(id)
+			currentNonce = wallet_list[id].IncrementNonce(priv)
 		)
-		if err = task.Do(ctx, client, priv, currentNonce, &queue, logger, ""); err != nil {
+		if err := task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, ""); err != nil {
 			if errors.Is(err, tps.ErrWrongNonce) {
 				return nil
 			} else if errors.Is(err, tps.ErrTaskRetry) {
-				wallet.RecetNonce(priv, wallet.IncrementNonce(priv))
+				wallet_list[id].RecetNonce(priv, wallet_list[id].IncrementNonce(priv))
 				return nil
 			} else if errors.Is(err, tps.NonceWrong) {
 				pri, _ := hex.DecodeString(priv)
 				thetaPrivateKey, _ := crypto.PrivateKeyFromBytes(pri)
 
-				nonce, err := tps.NewNonce(context.Background(), client, thetaPrivateKey.PublicKey().Address().Hex())
+				nonce, err := tps.NewNonce(context.Background(), &(*client)[id], thetaPrivateKey.PublicKey().Address().Hex())
 				if err != nil {
 					return errors.Wrap(err, "debug")
 				}
-				wallet.RecetNonce(priv, nonce.Current())
+				wallet_list[id].RecetNonce(priv, nonce.Current())
 				return nil
 			}
 			return errors.Wrap(err, "err Do")
