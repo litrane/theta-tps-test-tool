@@ -42,8 +42,8 @@ type EthClient struct {
 
 }
 
-func NewClient(rpcClientUrl string) (c EthClient, err error) { //,theta-url,eth-url
-	//c.client, err = ethclient.Dial(clientUrl)
+func NewClient(rpcClientUrl ,ethClientUrl string) (c EthClient, err error) { //,theta-url,eth-url
+	c.client, err = ethclient.Dial(ethClientUrl)
 	if err != nil {
 		return
 	}
@@ -427,7 +427,7 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	// }
 	// fmt.Println("transaction sent. txid: ", signedtx.Hash().Hex(), "nonce: ", nonce)
 	//wallet, address, err := tx.SoftWalletUnlock("/home/dd/.thetacli", "2E833968E5bB786Ae419c4d13189fB081Cc43bab", "qwertyuiop")
-	//time.Sleep(10 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	privateKey, err := crypto.HexToECDSA(privHex)
 	pri, err := hex.DecodeString(privHex)
 	thetaPrivateKey, err := crypto.PrivateKeyFromBytes(pri)
@@ -472,7 +472,7 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 		Inputs:  inputs,
 		Outputs: outputs,
 	}
-	sig, err := thetaPrivateKey.Sign(sendTx.SignBytes("testnet"))
+	sig, err := thetaPrivateKey.Sign(sendTx.SignBytes("testnet")) //privatenet,testnet
 	if err != nil {
 		log.Fatalln("Failed to sign transaction: %v\n", err)
 	}
@@ -509,11 +509,11 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	mutex.Lock()
 	txMap[common.HexToHash(result.TxHash)] = startTime
 	mutex.Unlock()
-	// CountNum += 1
+	CountNum += 1
 	// if CountNum%100 == 0 {
 	// 	fmt.Println("already send ", CountNum)
 	// }
-	// fmt.Println("have send ", CountNum, " txs")
+	fmt.Println("have send ", CountNum, " txs", nonce+1)
 	return common.Hash{}, err //common.BytesToHash(formatted), err
 }
 

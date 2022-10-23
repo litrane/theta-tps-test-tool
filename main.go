@@ -20,13 +20,13 @@ const (
 )
 
 var (
-	ThetaRpc         = []string{"http://20.220.200.72:16888/rpc", "http://20.163.215.150:16888/rpc", "http://20.163.221.185:16888/rpc", "http://20.231.77.191:16888/rpc"}
+	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://20.163.221.185:16888/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
 	EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
 	queueSize        = 999999            //队列大小
-	concurrency      = 4                 //并发数量
+	concurrency      = 1                 //并发数量
 	queue            = tps.NewQueue(queueSize)
 	closing          uint32
 	tpsClosing       uint32
@@ -96,9 +96,9 @@ func main() {
 		var client EthClient
 
 		if model == "CrossChainTNT20" {
-			client, err = NewClient("http://localhost:17900/rpc")
+			client, err = NewClient("http://localhost:17900/rpc",EthRpc[i])
 		} else {
-			client, err = NewClient(ThetaRpc[i])
+			client, err = NewClient(ThetaRpc[i],"")
 		}
 
 		if err != nil {
@@ -121,7 +121,7 @@ func main() {
 	}
 	var newclient EthClient
 	if model == "CrossChainTNT20" {
-		newclient, err = NewClient("http://localhost:17900/rpc")
+		newclient, err = NewClient("http://localhost:17900/rpc",EthRpc[0])
 		//newclient.client, err = ethclient.Dial("http://localhost:19988/rpc")
 	} else {
 		newclient = client_list[0]

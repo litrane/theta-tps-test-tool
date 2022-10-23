@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -41,16 +40,15 @@ func (t *EthTask) IncrementTryCount() error {
 func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce uint64, queue *tps.Queue, logger tps.Logger, contractAddress string) error {
 
 	var rootErr error
-	if model=="ERC20"{
-		_, rootErr = client.Erc20TransferFrom(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
-	} else if model=="CrossChainTNT20"{
-		_, rootErr = client.CrossChainTNT20Transfer(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
-	} else if model=="CrossSubChainTNT20"{
-		_, rootErr = client.CrossSubChainTNT20Transfer(ctx,priv,nonce,t.to,t.amount,contractAddress,1)
+	if model == "ERC20" {
+		_, rootErr = client.Erc20TransferFrom(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
+	} else if model == "CrossChainTNT20" {
+		_, rootErr = client.CrossChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
+	} else if model == "CrossSubChainTNT20" {
+		_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
 	} else {
 		_, rootErr = client.SendTx(ctx, priv, nonce, t.to, t.amount)
 	}
-	
 
 	if rootErr != nil {
 		if strings.Contains(rootErr.Error(), "Invalid Transaction") {
@@ -61,9 +59,13 @@ func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce 
 			//logger.Warn(fmt.Sprintf("nonce error, %s", rootErr.Error()))
 			return tps.ErrTaskRetry
 		}
+		if strings.Contains(rootErr.Error(), "ValidateInputAdvanced: Got") {
+
+			return rootErr
+		}
 		logger.Warn(fmt.Sprintf("faild sending, err: %s", rootErr.Error()))
 		if err := t.IncrementTryCount(); err != nil {
-			return errors.Wrap(rootErr, err.Error())
+			return tps.ErrWrongNonce
 		}
 		// if strings.Contains(rootErr.Error(), "ValidateInputAdvanced:"){
 		// 	return tps.NonceWrong

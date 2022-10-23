@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"context"
@@ -73,6 +76,14 @@ func ethStressTest(client *[]EthClient, ctx context.Context) {
 		)
 		if err := task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, ""); err != nil {
 			if errors.Is(err, tps.ErrWrongNonce) {
+				pri, _ := hex.DecodeString(priv)
+				thetaPrivateKey, _ := crypto.PrivateKeyFromBytes(pri)
+
+				nonce, err := tps.NewNonce(context.Background(), &(*client)[id], thetaPrivateKey.PublicKey().Address().Hex())
+				if err != nil {
+					return errors.Wrap(err, "debug")
+				}
+				wallet_list[id].RecetNonce(priv, nonce.Current())
 				return nil
 			} else if errors.Is(err, tps.ErrTaskRetry) {
 				wallet_list[id].RecetNonce(priv, wallet_list[id].IncrementNonce(priv))
@@ -86,6 +97,20 @@ func ethStressTest(client *[]EthClient, ctx context.Context) {
 					return errors.Wrap(err, "debug")
 				}
 				wallet_list[id].RecetNonce(priv, nonce.Current())
+				return nil
+			}
+			if strings.Contains(err.Error(), "ValidateInputAdvanced: Got") {
+				pattern := regexp.MustCompile(`(\d+)`)
+				numberStrings := pattern.FindAllStringSubmatch(err.Error(), -1)
+				numbers := make([]int, len(numberStrings))
+				for i, numberString := range numberStrings {
+					number, err := strconv.Atoi(numberString[1])
+					if err != nil {
+						panic(err)
+					}
+					numbers[i] = number
+				}
+				wallet_list[id].RecetNonce(priv, uint64(numbers[3]))
 				return nil
 			}
 			return errors.Wrap(err, "err Do")
