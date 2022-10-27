@@ -23,8 +23,8 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		latency_num int
 		latency_sum *big.Int
 	)
-	latency_num=0
-	latency_sum=big.NewInt(0)
+	latency_num = 0
+	latency_sum = big.NewInt(0)
 	for {
 		if atomic.LoadUint32(closing) == 1 {
 			break
@@ -60,11 +60,12 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		// NextIdlingDuration(idlingDuration, uint32(count), uint32(pendingTx))
 
 		total += count
-		latency_num+=1
-		latency_sum.Add(big.NewInt(int64(avg_latency)),latency_sum)
+		latency_num += 1
+		latency_sum.Add(big.NewInt(int64(avg_latency)), latency_sum)
 		elapsed := time.Now().Sub(startedAd).Seconds()
+		latency_time := time.Duration(big.NewInt(0).Div(latency_sum, big.NewInt(int64(latency_num))).Int64())
 		fmt.Print("------------------------------------------------------------------------------------\n")
-		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%d)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, big.NewInt(0).Div(latency_sum,big.NewInt(int64(latency_num))).Int64())
+		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%dms)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, latency_time)
 	}
 
 	return nil

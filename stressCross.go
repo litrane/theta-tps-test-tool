@@ -5,6 +5,9 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
@@ -12,7 +15,7 @@ import (
 	"github.com/thetatoken/theta/crypto"
 )
 
-func crossChainTNT20StressTest(client *EthClient, ctx context.Context) {
+func crossChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 
 	addrs := make([]string, len(privs))
 	for i := range privs {
@@ -33,10 +36,15 @@ func crossChainTNT20StressTest(client *EthClient, ctx context.Context) {
 		addrs[i] = fromAddress.Hex()
 	}
 
-	wallet, err := tps.NewWallet(ctx, client, privs, addrs)
-	if err != nil {
-		logger.Fatal("err NewWallet: ", err)
+	var wallet_list []tps.Wallet
+	for i := 0; i < client_number; i++ {
+		wallet_single, err := tps.NewWallet(ctx, (*client)[i], privs, addrs)
+		if err != nil {
+			logger.Fatal("err NewWallet: ", err)
+		}
+		wallet_list = append(wallet_list, wallet_single)
 	}
+	var err error
 
 	taskDo := func(t tps.Task, id int) error {
 		task, ok := t.(*EthTask)
@@ -48,14 +56,36 @@ func crossChainTNT20StressTest(client *EthClient, ctx context.Context) {
 		defer cancel()
 
 		var (
-			priv         = wallet.Priv(id)
-			currentNonce = wallet.IncrementNonce(priv)
+			priv         = wallet_list[id].Priv(id)
+			currentNonce = wallet_list[id].CurrentNonce(priv)
 		)
-		if err = task.Do(ctx, client, priv, currentNonce, &queue, logger, TokenBankAddress); err != nil {
+		err = task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, TokenBankAddress)
+		wallet_list[id].IncrementNonce(priv)
+		wallet_list[id].IncrementNonce(priv)
+		if err != nil {
+			if strings.Contains(err.Error(), "ValidateInputAdvanced: Got") {
+				pattern := regexp.MustCompile(`(\d+)`)
+				numberStrings := pattern.FindAllStringSubmatch(err.Error(), -1)
+				numbers := make([]int, len(numberStrings))
+				for i, numberString := range numberStrings {
+					number, err := strconv.Atoi(numberString[1])
+					if err != nil {
+						panic(err)
+					}
+					numbers[i] = number
+				}
+				wallet_list[id].RecetNonce(priv, uint64(numbers[3]))
+				fmt.Println("Restnonce is", wallet_list[id].CurrentNonce(priv))
+				return nil
+			}
 			if errors.Is(err, tps.ErrWrongNonce) {
-				wallet.RecetNonce(priv, currentNonce)
+				wallet_list[id].RecetNonce(priv, currentNonce)
 				task.tryCount = 0
 				queue.Push(task)
+				return nil
+			}
+			if errors.Is(err, tps.ErrTaskRetry) {
+				wallet_list[id].IncrementNonce(priv)
 				return nil
 			}
 			return errors.Wrap(err, "err Do")
@@ -93,7 +123,7 @@ func crossChainTNT20StressTest(client *EthClient, ctx context.Context) {
 		}
 	}()
 }
-func crossSubChainTNT20StressTest(client *EthClient, ctx context.Context) {
+func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 
 	addrs := make([]string, len(privs))
 	for i := range privs {
@@ -114,11 +144,15 @@ func crossSubChainTNT20StressTest(client *EthClient, ctx context.Context) {
 		addrs[i] = fromAddress.Hex()
 	}
 
-	wallet, err := tps.NewWallet(ctx, client, privs, addrs)
-	if err != nil {
-		logger.Fatal("err NewWallet: ", err)
+	var wallet_list []tps.Wallet
+	for i := 0; i < client_number; i++ {
+		wallet_single, err := tps.NewWallet(ctx, (*client)[i], privs, addrs)
+		if err != nil {
+			logger.Fatal("err NewWallet: ", err)
+		}
+		wallet_list = append(wallet_list, wallet_single)
 	}
-
+	var err error
 	taskDo := func(t tps.Task, id int) error {
 		task, ok := t.(*EthTask)
 		if !ok {
@@ -129,14 +163,36 @@ func crossSubChainTNT20StressTest(client *EthClient, ctx context.Context) {
 		defer cancel()
 
 		var (
-			priv         = wallet.Priv(id)
-			currentNonce = wallet.IncrementNonce(priv)
+			priv         = wallet_list[id].Priv(id)
+			currentNonce = wallet_list[id].CurrentNonce(priv)
 		)
-		if err = task.Do(ctx, client, priv, currentNonce, &queue, logger, TokenBankAddress); err != nil {
+		err = task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, TokenBankAddress)
+		wallet_list[id].IncrementNonce(priv)
+		wallet_list[id].IncrementNonce(priv)
+		if err != nil {
+			if strings.Contains(err.Error(), "ValidateInputAdvanced: Got") {
+				pattern := regexp.MustCompile(`(\d+)`)
+				numberStrings := pattern.FindAllStringSubmatch(err.Error(), -1)
+				numbers := make([]int, len(numberStrings))
+				for i, numberString := range numberStrings {
+					number, err := strconv.Atoi(numberString[1])
+					if err != nil {
+						panic(err)
+					}
+					numbers[i] = number
+				}
+				wallet_list[id].RecetNonce(priv, uint64(numbers[3]))
+				fmt.Println("Restnonce is", wallet_list[id].CurrentNonce(priv))
+				return nil
+			}
 			if errors.Is(err, tps.ErrWrongNonce) {
-				wallet.RecetNonce(priv, currentNonce)
+				wallet_list[id].RecetNonce(priv, currentNonce)
 				task.tryCount = 0
 				queue.Push(task)
+				return nil
+			}
+			if errors.Is(err, tps.ErrTaskRetry) {
+				wallet_list[id].IncrementNonce(priv)
 				return nil
 			}
 			return errors.Wrap(err, "err Do")
