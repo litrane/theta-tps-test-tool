@@ -22,6 +22,8 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		avg_latency time.Duration
 		latency_num int
 		latency_sum *big.Int
+		start1      time.Time
+		start2      time.Time
 	)
 	latency_num = 0
 	latency_sum = big.NewInt(0)
@@ -43,11 +45,14 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 			//TODO: handle timeout error
 			return errors.Wrap(err, "err CountTx")
 		}
-
+		start1 = start2
+		start2 = time.Now()
+		fmt.Println("chukuai", time.Since(start1))
 		if idling {
 			if count > 0 {
 				idling = false
 				startedAd = time.Now()
+
 			}
 			continue
 		}

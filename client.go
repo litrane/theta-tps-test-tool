@@ -221,7 +221,8 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 					if ok {
 						countChainTx2.Add(event.VoucherMintNonce, big.NewInt(1))
 						mutex.Unlock()
-						elapsedTime = elapsedTime + time.Since(startTime)/time.Second
+						elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
+						fmt.Println("latency is", time.Since(startTime))
 						result += 1
 					} else {
 						fmt.Println("unfind!", event.VoucherMintNonce)
@@ -682,7 +683,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	}
 
 	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337")
+	subchainTNT20Address := common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4") //subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
 	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
 	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
 	if err != nil {
@@ -719,12 +720,16 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// if err != nil {
 	// 	return common.BytesToHash([]byte("")), err
 	// }
-	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(366), subchainTNT20Address, fromAddress, big.NewInt(1))
+	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(360777), subchainTNT20Address, fromAddress, big.NewInt(1))
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
-	lockNonce, _ := erc20TokenBank.TokenLockNonceMap(nil, big.NewInt(366))
+	lockNonce, _ := erc20TokenBank.TokenLockNonceMap(nil, big.NewInt(360777))
 	fmt.Println("lock", lockNonce)
+	startTime := time.Now()
+	mutex.Lock()
+	txMapCrossChain[lockNonce.String()] = startTime
+	mutex.Unlock()
 	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
 	if err != nil {
 		log.Fatal(err)
@@ -736,10 +741,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// fmt.Println(receipt.Logs)
 	// fmt.Println(receipt.Logs[2].Data)
 	//resolveNum := Resolve(receipt.Logs[2].Data)
-	startTime := time.Now()
-	mutex.Lock()
-	txMapCrossChain[lockNonce.String()] = startTime
-	mutex.Unlock()
+
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
@@ -761,7 +763,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	}
 
 	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	subchainTNT20Address := common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4") // 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337
+	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337") // subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
 	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
 	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
 	if err != nil {
@@ -783,7 +785,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	auth.GasLimit = uint64(3000000) // in units
 	auth.GasPrice = &gasPrice
 
-	_, err1 := subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
+	_, err1 := subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(99999999))
 	fmt.Println(err1)
 	time.Sleep(50 * time.Millisecond)
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
@@ -808,11 +810,11 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	// }
 	//fmt.Println("success")
 	startTime := time.Now()
-	mutex.Lock()
+	//mutex.Lock()
 	//fmt.Println(res.Hash().String())
 	txMap[fmt.Sprint(nonce+1)] = startTime
 	txMap[fmt.Sprint(nonce+2)] = startTime
-	mutex.Unlock()
+	//mutex.Unlock()
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)

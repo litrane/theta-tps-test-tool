@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://20.163.221.185:16900/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
+	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://127.0.0.1:16900/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
 	EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
@@ -40,7 +40,7 @@ var (
 		"8888888888888888888888888888888888888888888888888888888888888888",
 	}
 
-	model = "CrossSubChainTNT20" //压测类型
+	model = "CrossChainTNT20" //压测类型
 
 	addr_priv     = make(map[string]string, len(privs))
 	erc721address = "0x0000000000000000000000000000000000000009"
@@ -50,9 +50,9 @@ var (
 	avgLatency       time.Duration
 	mutex            sync.Mutex
 	CountNum         int
-	chainID          = big.NewInt(366)
+	chainID          = big.NewInt(366) // 366 360777
 	Erc20Address     = ""
-	TokenBankAddress = "0x2Ce636d6240f8955d085a896e12429f8B3c7db26" // 0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D
+	TokenBankAddress = "0x2Ce636d6240f8955d085a896e12429f8B3c7db26" // subchain 0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D mainchain 0x2Ce636d6240f8955d085a896e12429f8B3c7db26
 	countChainTx1    = big.NewInt(0)
 	countChainTx2    = big.NewInt(0)
 	txMapCrossChain  map[string]time.Time
@@ -120,7 +120,7 @@ func main() {
 	}
 	var newclient EthClient
 	if model == "CrossChainTNT20" {
-		newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc")
+		newclient, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 		//newclient.client, err = ethclient.Dial("http://localhost:19988/rpc")
 	} else {
 		newclient = client_list[0]
