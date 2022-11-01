@@ -12,6 +12,7 @@ type Wallet struct {
 	privs      []string
 	nonces     map[string]*Nonce
 	roteteSlot uint32
+	sendCount  uint32
 }
 
 func NewWallet(ctx context.Context, client Client, privs []string, addrs []string) (w Wallet, err error) {
@@ -56,4 +57,14 @@ func (w *Wallet) CurrentNonce(priv string) uint64 {
 
 func (w *Wallet) RecetNonce(priv string, nonce uint64) {
 	w.nonces[priv].Reset(nonce)
+}
+
+func (w *Wallet) SendCount() uint32 {
+	return atomic.LoadUint32(&w.sendCount)
+}
+func (w *Wallet) IncrementSendCount() {
+	atomic.AddUint32(&w.sendCount, 1)
+}
+func (w *Wallet) PrivsLength() int {
+	return len(w.privs)
 }

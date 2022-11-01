@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://127.0.0.1:16900/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
-	EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
+	ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16888/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
+	EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
@@ -40,7 +40,7 @@ var (
 		"8888888888888888888888888888888888888888888888888888888888888888",
 	}
 
-	model = "CrossChainTNT20" //压测类型
+	model = "CrossSubChainTNT20" //压测类型
 
 	addr_priv     = make(map[string]string, len(privs))
 	erc721address = "0x0000000000000000000000000000000000000009"
@@ -50,9 +50,9 @@ var (
 	avgLatency       time.Duration
 	mutex            sync.Mutex
 	CountNum         int
-	chainID          = big.NewInt(366) // 366 360777
+	chainID          = big.NewInt(360777) // 366 360777
 	Erc20Address     = ""
-	TokenBankAddress = "0x2Ce636d6240f8955d085a896e12429f8B3c7db26" // subchain 0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D mainchain 0x2Ce636d6240f8955d085a896e12429f8B3c7db26
+	TokenBankAddress = "0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D" // subchain 0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D mainchain 0x2Ce636d6240f8955d085a896e12429f8B3c7db26
 	countChainTx1    = big.NewInt(0)
 	countChainTx2    = big.NewInt(0)
 	txMapCrossChain  map[string]time.Time
@@ -62,22 +62,6 @@ var (
 func main() {
 	txMap = make(map[string]time.Time)
 	txMapCrossChain = make(map[string]time.Time)
-	// client := jsonrpc.NewRPCClient("http://localhost:16888/rpc")
-	// // res, err := client1.BlockNumber(context.Background())
-	// rpcRes, rpcErr := client.Call("theta.GetBlockByHeight", trpc.GetBlockByHeightArgs{
-	// 	Height: tcommon.JSONUint64(378)})
-
-	// //logger.Infof("eth_getBlockByNumber, rpcRes: %v, rpcRes.Rsult: %v", rpcRes, rpcRes.Result)
-	// chainID := new(big.Int)
-	// chainID.SetString("privatenet", 16)
-	// result, err := ethrpc.GetBlockFromTRPCResult(chainID, rpcRes, rpcErr, true)
-
-	// fmt.Println(err, result.Transactions)
-	// client, err := ethclient.Dial("http://localhost:18888/rpc")
-	// fmt.Println(err)
-	// block, err:= client.BlockByNumber(context.Background(), big.NewInt(int64(378)))
-	// fmt.Println(err)
-	// fmt.Println(len(block.Transactions()))
 	go func() {
 		//停止发送交易时间
 		defer atomic.AddUint32(&closing, 1)
@@ -91,10 +75,11 @@ func main() {
 	}()
 	var client_list []EthClient
 	var err error
+	//初始化客户端
 	for i := 0; i < client_number; i++ {
 		var client EthClient
 
-		if model == "CrossChainTNT20" {
+		if model == "CrossSubChainTNT20" {
 			client, err = NewClient(ThetaRpc[i], EthRpc[i])
 		} else {
 			client, err = NewClient(ThetaRpc[i], EthRpc[i])
@@ -105,26 +90,30 @@ func main() {
 		}
 		client_list = append(client_list, client)
 	}
-
-	//fmt.Println(client.CountTx(context.Background(), 3847))
+	//还未测试完init token
+	//init_token(client_list[0], privs)
+	//return
+	//开始进行压测
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	if model == "ERC20" {
-		erc20StressTest(&client, ctx)
-	} else if model == "CrossChainTNT20" {
+		erc20StressTest(&client, ctx) //ERC20转账测试（目前已废弃）
+	} else if model == "CrossChainTNT20" { //链间交易测试
 		crossChainTNT20StressTest(&client_list, ctx)
-	} else if model == "CrossSubChainTNT20" {
+	} else if model == "CrossSubChainTNT20" { //链内lock测试
 		crossSubChainTNT20StressTest(&client_list, ctx)
 	} else {
-		ethStressTest(&client_list, ctx)
+		ethStressTest(&client_list, ctx) //Theta普通转账（非合约）交易测试
 	}
 	var newclient EthClient
 	if model == "CrossChainTNT20" {
+		//在跨链测试时需要开一个新的client在另一条链进行监测
 		newclient, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-		//newclient.client, err = ethclient.Dial("http://localhost:19988/rpc")
 	} else {
+		//否则就用第一个client监测
 		newclient = client_list[0]
 	}
+	//开始TPS以及延迟测量
 	fmt.Println("-----------Start Measuring----------")
 	if err = tps.StartTPSMeasuring(context.Background(), &newclient, &tpsClosing, &idlingDuration, logger); err != nil {
 		fmt.Println("err StartTPSMeasuring:", err)

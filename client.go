@@ -15,9 +15,8 @@ import (
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/pkg/errors"
-	"github.com/thetatoken/theta/blockchain"
 	"github.com/thetatoken/theta/common"
-	"github.com/thetatoken/theta/common/hexutil"
+
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/rpc"
@@ -25,11 +24,9 @@ import (
 
 	ct "github.com/blockchain-tps-test/samples/theta/accessors"
 	tcommon "github.com/thetatoken/theta/common"
-	"github.com/thetatoken/theta/core"
 	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
-	rpcc "github.com/ybbus/jsonrpc"
 )
 
 var (
@@ -53,46 +50,6 @@ func NewClient(rpcClientUrl, ethClientUrl string) (c EthClient, err error) { //,
 	return
 }
 
-type GetStatusArgs struct{}
-
-type GetStatusResult struct {
-	Address                    string            `json:"address"`
-	ChainID                    string            `json:"chain_id"`
-	PeerID                     string            `json:"peer_id"`
-	LatestFinalizedBlockHash   common.Hash       `json:"latest_finalized_block_hash"`
-	LatestFinalizedBlockHeight common.JSONUint64 `json:"latest_finalized_block_height"`
-	LatestFinalizedBlockTime   *common.JSONBig   `json:"latest_finalized_block_time"`
-	LatestFinalizedBlockEpoch  common.JSONUint64 `json:"latest_finalized_block_epoch"`
-	CurrentEpoch               common.JSONUint64 `json:"current_epoch"`
-	CurrentHeight              common.JSONUint64 `json:"current_height"`
-	CurrentTime                *common.JSONBig   `json:"current_time"`
-	Syncing                    bool              `json:"syncing"`
-	GenesisBlockHash           common.Hash       `json:"genesis_block_hash"`
-	SnapshotBlockHeight        common.JSONUint64 `json:"snapshot_block_height"`
-	SnapshotBlockHash          common.Hash       `json:"snapshot_block_hash"`
-}
-
-func HandleThetaRPCResponse(rpcRes *rpcc.RPCResponse, rpcErr error, parse func(jsonBytes []byte) (interface{}, error)) (result interface{}, err error) {
-	if rpcErr != nil {
-		return nil, fmt.Errorf("failed to get theta RPC response: %v", rpcErr)
-	}
-	if rpcRes.Error != nil {
-		return nil, fmt.Errorf("theta RPC returns an error: %v", rpcRes.Error)
-	}
-
-	var jsonBytes []byte
-	jsonBytes, err = json.MarshalIndent(rpcRes.Result, "", "    ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse theta RPC response: %v, %s", err, string(jsonBytes))
-	}
-
-	//logger.Infof("HandleThetaRPCResponse, jsonBytes: %v", string(jsonBytes))
-	result, err = parse(jsonBytes)
-	if err != nil {
-		logger.Warn("Failed to parse theta RPC response: " + err.Error())
-	}
-	return
-}
 func (c EthClient) LatestBlockHeight(ctx context.Context) (uint64, error) {
 
 	// res, err := c.client.BlockNumber(ctx)
@@ -116,64 +73,6 @@ func (c EthClient) LatestBlockHeight(ctx context.Context) (uint64, error) {
 	}
 	return result, nil
 
-}
-
-type EthGetBlockResult struct {
-	Height    hexutil.Uint64 `json:"number"`
-	Hash      common.Hash    `json:"hash"`
-	Parent    common.Hash    `json:"parentHash"`
-	Timestamp hexutil.Uint64 `json:"timestamp"`
-	Proposer  common.Address `json:"miner"`
-	TxHash    common.Hash    `json:"transactionsRoot"`
-	StateHash common.Hash    `json:"stateRoot"`
-
-	ReiceptHash     common.Hash    `json:"receiptsRoot"`
-	Nonce           string         `json:"nonce"`
-	Sha3Uncles      common.Hash    `json:"sha3Uncles"`
-	LogsBloom       string         `json:"logsBloom"`
-	Difficulty      hexutil.Uint64 `json:"difficulty"`
-	TotalDifficulty hexutil.Uint64 `json:"totalDifficulty"`
-	Size            hexutil.Uint64 `json:"size"`
-	GasLimit        hexutil.Uint64 `json:"gasLimit"`
-	GasUsed         hexutil.Uint64 `json:"gasUsed"`
-	ExtraData       string         `json:"extraData"`
-	Uncles          []common.Hash  `json:"uncles"`
-	Transactions    []interface{}  `json:"transactions"`
-}
-type ThetaGetBlockResult struct {
-	*ThetaGetBlockResultInner
-}
-type ThetaGetBlocksResult []*ThetaGetBlockResultInner
-
-type ThetaGetBlockResultInner struct {
-	ChainID            string                   `json:"chain_id"`
-	Epoch              common.JSONUint64        `json:"epoch"`
-	Height             common.JSONUint64        `json:"height"`
-	Parent             common.Hash              `json:"parent"`
-	TxHash             common.Hash              `json:"transactions_hash"`
-	StateHash          common.Hash              `json:"state_hash"`
-	Timestamp          *common.JSONBig          `json:"timestamp"`
-	Proposer           common.Address           `json:"proposer"`
-	HCC                core.CommitCertificate   `json:"hcc"`
-	GuardianVotes      *core.AggregatedVotes    `json:"guardian_votes"`
-	EliteEdgeNodeVotes *core.AggregatedEENVotes `json:"elite_edge_node_votes"`
-
-	Children []common.Hash    `json:"children"`
-	Status   core.BlockStatus `json:"status"`
-
-	Hash common.Hash `json:"hash"`
-	Txs  []rpc.Tx    `json:"transactions"`
-}
-type LogData struct {
-	Address common.Address `json:"address" gencodec:"required"`
-	// list of topics provided by the contract.
-	Topics []common.Hash `json:"topics" gencodec:"required"`
-	// supplied by the contract, usually ABI-encoded
-	Data []byte `json:"data" gencodec:"required"`
-}
-type RPCResult struct {
-	Result  []LogData `json:"logs"`
-	Address string    `json:"contractAddress"`
 }
 
 func parse(jsonBytes []byte) (int, time.Duration, error) {
@@ -233,7 +132,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 					//fmt.Println(common.value["hash"].String())
 					//var hash string
 					//json.Unmarshal(value["raw"], &hash)
-					//fmt.Println(string(value["raw"]))
+					fmt.Println(string(value["raw"]))
 					pattern := regexp.MustCompile(`"sequence": "(\d+)"`)
 					numberStrings := pattern.FindAllStringSubmatch(string(value["raw"]), -1)
 					numbers := make([]int, len(numberStrings))
@@ -244,7 +143,15 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 						}
 						numbers[i] = number
 					}
-					startTime, ok := txMap[fmt.Sprint(numbers[0])]
+
+					pattern = regexp.MustCompile(`"address": "(.*?)"`)
+					numberStrings = pattern.FindAllStringSubmatch(string(value["raw"]), -1)
+					strings1 := make([]string, len(numberStrings))
+					for i, numberString := range numberStrings {
+						strings1[i] = numberString[1]
+						fmt.Println(numberString)
+					}
+					startTime, ok := txMap[strings.ToUpper(strings1[0])+fmt.Sprint(numbers[0])]
 					if ok {
 						//fmt.Println(trpcResult.Txs[i].Hash)
 						fmt.Println("start ", startTime, "end-start", time.Since(startTime))
@@ -299,17 +206,6 @@ func (c EthClient) CountPendingTx(ctx context.Context) (int, error) {
 	// 	return 0, err
 	// }
 	return int(0), nil
-}
-
-type GetAccountArgs struct {
-	Name    string            `json:"name"`
-	Address string            `json:"address"`
-	Height  common.JSONUint64 `json:"height"`
-	Preview bool              `json:"preview"` // preview the account balance from the ScreenedView
-}
-type GetAccountResult struct {
-	*types.Account
-	Address string `json:"address"`
 }
 
 func (c EthClient) Nonce(ctx context.Context, address string) (uint64, error) {
@@ -373,23 +269,6 @@ func (c *EthClient) getChainID(ctx context.Context) big.Int {
 	return *big.NewInt(int64(ethChainID))
 }
 
-type GetBlockByHeightArgs struct {
-	Height             common.JSONUint64 `json:"height"`
-	IncludeEthTxHashes bool              `json:"include_eth_tx_hashes"`
-}
-type Tx struct {
-	types.Tx       `json:"raw"`
-	Type           byte                              `json:"type"`
-	Hash           common.Hash                       `json:"hash"`
-	Receipt        *blockchain.TxReceiptEntry        `json:"receipt"`
-	BalanceChanges *blockchain.TxBalanceChangesEntry `json:"balance_changes"`
-}
-type TxTmp struct {
-	Tx   json.RawMessage `json:"raw"`
-	Type byte            `json:"type"`
-	Hash tcommon.Hash    `json:"hash"`
-}
-
 func (c *EthClient) getGasPriceSuggestion(ctx context.Context) big.Int {
 
 	// gasPrice, err := c.client.SuggestGasPrice(ctx)
@@ -448,8 +327,6 @@ func (c *EthClient) getGasPriceSuggestion(ctx context.Context) big.Int {
 	if count != 0 {
 		gasPrice = new(big.Int).Div(totalGasPrice, big.NewInt(int64(count)))
 	}
-	//.Printf("gasPrice: %v\n", gasPrice)
-	//result := "0x" + gasPrice.Text(16)
 	return *gasPrice
 
 }
@@ -556,75 +433,6 @@ func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to
 	// }
 	fmt.Println("have send ", CountNum, " txs", nonce+1)
 	return common.Hash{}, err //common.BytesToHash(formatted), err
-}
-
-const RawABI = `
-[
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "denom",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "targetChainVoucherReceiver",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "voucherContact",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "mintedAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "sourceChainTokenLockNonce",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "voucherMintNonce",
-				"type": "uint256"
-			}
-		],
-		"name": "TNT20VoucherMinted",
-		"type": "event"
-	}
-]`
-
-func Resolve(data []byte) big.Int {
-	contractAbi, err := abi.JSON(strings.NewReader(RawABI))
-	if err != nil {
-		fmt.Println(err)
-	}
-	type TransferEvt struct {
-		Denom                      string
-		TargetChainVoucherReceiver common.Address
-		VoucherContact             common.Address
-		MintedAmount               *big.Int
-		SourceChainTokenLockNonce  *big.Int
-		VoucherMintNonce           *big.Int
-	}
-	var event TransferEvt
-	h := data
-	err = contractAbi.UnpackIntoInterface(&event, "TNT20VoucherMinted", h)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return *event.VoucherMintNonce
 }
 func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce uint64, to string, value int64, erc20address string, tokenAmount int) (common.Hash, error) {
 
@@ -765,7 +573,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	fromAddress := pubkeyToAddress(*publicKeyECDSA)
 	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337") // subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
 	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
-	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
+	//subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
@@ -785,11 +593,11 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	auth.GasLimit = uint64(3000000) // in units
 	auth.GasPrice = &gasPrice
 
-	_, err1 := subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(99999999))
-	fmt.Println(err1)
+	//_, err1 := subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(99999999))
+	//fmt.Println(err1)
 	time.Sleep(50 * time.Millisecond)
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
-	auth.Nonce = big.NewInt(int64(nonce + 1))
+	//auth.Nonce = big.NewInt(int64(nonce + 1))
 	auth.Value = crossChainFee
 	//time.Sleep(1 * time.Second)
 	//fmt.Println(subchainTNT20Instance.Allowance(nil, fromAddress, common.HexToAddress(contractAddress)))
@@ -804,20 +612,19 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-	// fmt.Println(receipt.Logs)
 	// if receipt.Status != 1 {
 	// 	log.Fatal("lock error")
 	// }
-	//fmt.Println("success")
+	// fmt.Println("success")
 	startTime := time.Now()
 	//mutex.Lock()
 	//fmt.Println(res.Hash().String())
-	txMap[fmt.Sprint(nonce+1)] = startTime
-	txMap[fmt.Sprint(nonce+2)] = startTime
+	txMap[strings.ToUpper(fromAddress.Hex())+fmt.Sprint(nonce+1)] = startTime
 	//mutex.Unlock()
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
 	}
+	fmt.Println(fromAddress.Hex())
 	return res.Hash(), nil
 }

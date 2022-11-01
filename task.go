@@ -38,19 +38,19 @@ func (t *EthTask) IncrementTryCount() error {
 }
 
 func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce uint64, queue *tps.Queue, logger tps.Logger, contractAddress string) error {
-
+//根据不同的model生成不同的发送交易的任务
 	var rootErr error
 	if model == "ERC20" {
 		_, rootErr = client.Erc20TransferFrom(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
 	} else if model == "CrossChainTNT20" {
-		_, rootErr = client.CrossChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
+		_, rootErr = client.CrossChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)//链间交易
 	} else if model == "CrossSubChainTNT20" {
-		_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
+		_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)//链内TNT20
 	} else {
 		_, rootErr = client.SendTx(ctx, priv, nonce, t.to, t.amount)
 	}
 
-	if rootErr != nil {
+	if rootErr != nil {//根据错误捕捉，并返回错误类型
 		if strings.Contains(rootErr.Error(), "Invalid Transaction") {
 			//logger.Warn(fmt.Sprintf("nonce error, %s", rootErr.Error()))
 			return tps.ErrWrongNonce
