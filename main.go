@@ -33,14 +33,14 @@ var (
 	logLevel         = tps.WARN_LEVEL // INFO_LEVEL, WARN_LEVEL, FATAL_LEVEL
 	logger           = tps.NewLogger(logLevel)
 	privs            = []string{
-		"93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737",
+		"472d4146a9fb59433d76c42be9ff0d8a9e1cfbaaff01cbdf68e858715c85af01",
 		"a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d",
 		"d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013",
 		"83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d",
 		"8888888888888888888888888888888888888888888888888888888888888888",
 	}
 
-	model = "CrossSubChainTNT20" //压测类型
+	model = "CrossChainTNT20" //压测类型
 
 	addr_priv     = make(map[string]string, len(privs))
 	erc721address = "0x0000000000000000000000000000000000000009"
@@ -108,7 +108,7 @@ func main() {
 	var newclient EthClient
 	if model == "CrossChainTNT20" {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	} else {
 		//否则就用第一个client监测
 		newclient = client_list[0]

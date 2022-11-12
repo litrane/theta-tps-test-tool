@@ -93,38 +93,41 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
 				if model == "CrossChainTNT20" {
 					var test RPCResult
+					fmt.Println(string(value["receipt"]))
 					json.Unmarshal(value["receipt"], &test)
-					fmt.Println(test.Result[1].Topics)
-					fmt.Println(crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
-					type TransferEvt struct {
-						Denom                      string
-						TargetChainVoucherReceiver common.Address
-						VoucherContact             common.Address
-						MintedAmount               *big.Int
-						SourceChainTokenLockNonce  *big.Int
-						VoucherMintNonce           *big.Int
-					}
-					var event TransferEvt
-					contractAbi, _ := abi.JSON(strings.NewReader(RawABI))
-					txData := test.Result[1].Data
-					h := []byte(txData)
+					if len(test.Result) != 0 {
+						fmt.Println(test.Result[1].Topics)
+						fmt.Println(crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
+						type TransferEvt struct {
+							Denom                      string
+							TargetChainVoucherReceiver common.Address
+							VoucherContact             common.Address
+							MintedAmount               *big.Int
+							SourceChainTokenLockNonce  *big.Int
+							VoucherMintNonce           *big.Int
+						}
+						var event TransferEvt
+						contractAbi, _ := abi.JSON(strings.NewReader(RawABI))
+						txData := test.Result[1].Data
+						h := []byte(txData)
 
-					err := contractAbi.UnpackIntoInterface(&event, "TNT20VoucherMinted", h)
-					if err != nil {
-						fmt.Println(err)
-					}
-					fmt.Println("find", event.VoucherMintNonce)
-					mutex.Lock()
+						err := contractAbi.UnpackIntoInterface(&event, "TNT20VoucherMinted", h)
+						if err != nil {
+							fmt.Println(err)
+						}
+						fmt.Println("find", event.VoucherMintNonce)
+						mutex.Lock()
 
-					startTime, ok := txMapCrossChain[event.VoucherMintNonce.String()]
-					if ok {
-						countChainTx2.Add(event.VoucherMintNonce, big.NewInt(1))
-						mutex.Unlock()
-						elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
-						fmt.Println("latency is", time.Since(startTime))
-						result += 1
-					} else {
-						fmt.Println("unfind!", event.VoucherMintNonce)
+						startTime, ok := txMapCrossChain[event.VoucherMintNonce.String()]
+						if ok {
+							countChainTx2.Add(event.VoucherMintNonce, big.NewInt(1))
+							mutex.Unlock()
+							elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
+							fmt.Println("latency is", time.Since(startTime))
+							result += 1
+						} else {
+							fmt.Println("unfind!", event.VoucherMintNonce)
+						}
 					}
 
 				} else if model == "CrossSubChainTNT20" {
@@ -491,7 +494,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	}
 
 	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	subchainTNT20Address := common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4") //subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
+	subchainTNT20Address := common.HexToAddress("0x47c5e40890bcE4a473A49D7501808b9633F29782") //subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
 	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
 	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
 	if err != nil {
@@ -502,7 +505,8 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
 	// address
 	//toAddress := common.HexToAddress(to)
-
+	rr, rt := subchainTNT20Instance.BalanceOf(nil, fromAddress)
+	fmt.Println("coin is ", rr, rt)
 	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
 	if err != nil {
 		log.Fatal(err)
