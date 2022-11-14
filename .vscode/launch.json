@@ -11,7 +11,10 @@
             "mode": "auto",
             "program": "${workspaceRoot}",
             "cwd": "${workspaceRoot}",
-            "args": []
+            "args": [
+                "0",
+                "CrossChain",
+            ]
         }
     ]
 }

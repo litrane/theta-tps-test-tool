@@ -220,9 +220,8 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 	if concurrency > MaxConcurrency {
 		logger.Warn(fmt.Sprintf("concurrency setting is over logical max(%d)", MaxConcurrency))
 	}
-	for i := 0; i < concurrency; i++ {
-		go worker.Run(&queue, i)
-	}
+
+	go worker.Run(&queue, clientID)
 
 	go func() {
 		count := 2
@@ -234,21 +233,13 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 			if queue.CountTasks() > queueSize {
 				continue
 			}
-			if(count%crossPercentage==0){
-				queue.Push(&EthTask{
-					to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-					amount:  1,
-					tokenId: int64(count),
-					transfer_type: "CrossChainTNT20",
-				})
-			}else{
-				queue.Push(&EthTask{
-					to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-					amount:  1,
-					tokenId: int64(count),
-					transfer_type: "CrossSubChainTNT20",
-				})
-			}
+
+			queue.Push(&EthTask{
+				to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+				amount:        1,
+				tokenId:       int64(count),
+				transfer_type: "CrossChainTNT20",
+			})
 			count++
 		}
 	}()

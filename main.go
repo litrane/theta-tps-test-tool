@@ -21,8 +21,8 @@ const (
 )
 
 var (
-	ThetaRpc         = []string{"http://10.10.1.5:16900/rpc", "http://127.0.0.1:16888/rpc", "http://20.220.200.72:16888/rpc", "http://20.231.77.191:16888/rpc"}
-	EthRpc           = []string{"http://10.10.1.5:19888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
+	ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
+	EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
@@ -34,13 +34,22 @@ var (
 	idlingDuration   uint32
 	logLevel         = tps.WARN_LEVEL // INFO_LEVEL, WARN_LEVEL, FATAL_LEVEL
 	logger           = tps.NewLogger(logLevel)
-	privs            = []string{
-		"472d4146a9fb59433d76c42be9ff0d8a9e1cfbaaff01cbdf68e858715c85af01",
-		"a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d",
-		"d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013",
-		"83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d",
-		"8888888888888888888888888888888888888888888888888888888888888888",
-	}
+	privs            = []string{"57cf79e443d80c5681b5eb44a6e686f8d2289f0b15a784371aa16bbb976780aa",
+		"728a2e5396dad4097ada540da0302d4cae3cd75ad94e151a43ec55e1c4c8cc5e",
+		"0a709015ad8cd76f66f22b4ede28c5af6a3f4f2e0621d4d41e3e25405a9078a5",
+		"1b61f740a6db3648972eb6721b2144f1df5d7851e4eb491ade82640a2b90e704",
+		"daab42f8f14cce9b09f1171518d32b62958f92997c9388d06d77def278fbb229",
+		"83afc13820ea817f20e543c110505e2d0116aaf27c83297196fdaf954d1465e4",
+		"4fa984962825e78281d01074896a111355dd331b97abe358a9ee371afbbf2ccd",
+		"142db3c669b0d0e1a34cc5185e1bcd4709cc2175c00d039b537ef85372d634d3",
+		"bd07e51c0776035198274aea5589cf81bca664bcde6ed25b068e255a2b9bc8e1",
+		"1c9e43a31975347a82b3ddf16fae86b8ead47190b860ff7a5ba93798480ef8a9",
+		"f24563e37e24569426bf4d38fa7a0b95e37a2bd9c6336d86310cd9e26a8524e5",
+		"c94aef092b9800a35f924bd9d8092717100fc60f6b212b76d44dfcd76491c1d3",
+		"41526bca89584202ff2ec68f220781fa63e933b0d5710b1a8c5b94f2b6fbcd7a",
+		"c335a892c7cf559780c2888c89906ab5ec19db6e8abc2ba090e4765231b549c6",
+		"4e279c0e0b3839398533ebb4aa7b47e9f417bba636c5a780ebcce50dfef9b2a2",
+		"d7a0529fc4e96af87cdbccfc74f53c4e7ce42699b524dd5c757db9ff12e196d4"}
 
 	model = "CrossChainTNT20" //压测类型
 
@@ -52,20 +61,21 @@ var (
 	avgLatency       time.Duration
 	mutex            sync.Mutex
 	CountNum         int
-	chainID          = big.NewInt(360777) // 366 360777
+	chainID          = big.NewInt(360001) // 366 360777
 	Erc20Address     = ""
 	TokenBankAddress = "0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D" // subchain 0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D mainchain 0x2Ce636d6240f8955d085a896e12429f8B3c7db26
 	countChainTx1    = big.NewInt(0)
 	countChainTx2    = big.NewInt(0)
 	txMapCrossChain  map[string]time.Time
-	client_number    = concurrency
+	client_number    = 4
 	clientID         int
 	crossPercentage  = 100
 )
 
 func main() {
-	if len(os.Args) == 1 {
-		clientID, _ = strconv.Atoi(os.Args[0])
+	if len(os.Args) == 3 {
+		clientID, _ = strconv.Atoi(os.Args[1])
+		model = os.Args[2]
 	} else {
 		fmt.Println("Wrong Input Arguments!")
 	}
@@ -109,9 +119,9 @@ func main() {
 	crossSubChainTNT20StressTest(&client_list, ctx)
 
 	var newclient EthClient
-	if model == "CrossChainTNT20" {
+	if model == "CrossChain" {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient, err = NewClient("http://10.10.1.1:16888/rpc", "http://10.10.1.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	} else {
 		//否则就用第一个client监测
 		newclient = client_list[0]

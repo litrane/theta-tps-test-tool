@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -91,7 +90,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 		json.Unmarshal(objmap["transactions"], &txmaps)
 		for i, value := range txmaps {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
-				if model == "CrossChainTNT20" {
+				if model == "CrossChain" {
 					var test RPCResult
 					fmt.Println(string(value["receipt"]))
 					json.Unmarshal(value["receipt"], &test)
@@ -116,6 +115,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 							fmt.Println(err)
 						}
 						fmt.Println("find", event.VoucherMintNonce)
+						fmt.Println("find", event.Denom)
 						mutex.Lock()
 
 						startTime, ok := txMapCrossChain[event.VoucherMintNonce.String()]
@@ -130,7 +130,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 						}
 					}
 
-				} else if model == "CrossSubChainTNT20" {
+				} else if model == "Inchain" {
 					mutex.Lock()
 					//fmt.Println(common.value["hash"].String())
 					//var hash string
@@ -333,152 +333,87 @@ func (c *EthClient) getGasPriceSuggestion(ctx context.Context) big.Int {
 	return *gasPrice
 
 }
+func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (interface{}, error) {
+	logger.Infof("eth_getTransactionReceipt called, txHash: %v", hashStr)
 
-// sends transaction to the network
-func (c *EthClient) SendTx(ctx context.Context, privHex string, nonce uint64, to string, value int64) (common.Hash, error) {
+	result := common.EthGetReceiptResult{}
 
-	// signedtx, err := c.signTransaciton(ctx, privHex, nonce, to, value)
-
-	// if err != nil {
-	// 	return common.BytesToHash([]byte("")), err
-	// }
-	// if err := c.client.SendTransaction(ctx, signedtx); err != nil {
-	// 	log.Fatalln("error in SendTx while getting chain id:", err)
-
-	// }
-	// fmt.Println("transaction sent. txid: ", signedtx.Hash().Hex(), "nonce: ", nonce)
-	//wallet, address, err := tx.SoftWalletUnlock("/home/dd/.thetacli", "2E833968E5bB786Ae419c4d13189fB081Cc43bab", "qwertyuiop")
-	time.Sleep(1 * time.Millisecond)
-	privateKey, err := crypto.HexToECDSA(privHex)
-	pri, err := hex.DecodeString(privHex)
-	thetaPrivateKey, err := crypto.PrivateKeyFromBytes(pri)
-	// privateKey, err := crypto.HexToECDSA("2dad160420b1e9b6fc152cd691a686a7080a0cee41b98754597a2ce57cc5dab1")
-	if err != nil {
-		log.Fatal(err)
+	parse := func(jsonBytes []byte) (interface{}, error) {
+		trpcResult := trpc.GetTransactionResult{}
+		json.Unmarshal(jsonBytes, &trpcResult)
+		var objmap map[string]json.RawMessage
+		json.Unmarshal(jsonBytes, &objmap)
+		if objmap["transaction"] != nil {
+			if types.TxType(trpcResult.Type) == types.TxSend {
+				tx := types.SendTx{}
+				json.Unmarshal(objmap["transaction"], &tx)
+				result.From = tx.Inputs[0].Address
+				result.To = tx.Outputs[0].Address
+			}
+			if types.TxType(trpcResult.Type) == types.TxSmartContract {
+				tx := types.SmartContractTx{}
+				json.Unmarshal(objmap["transaction"], &tx)
+				result.From = tx.From.Address
+				result.To = tx.To.Address
+				result.ContractAddress = trpcResult.Receipt.ContractAddress
+			}
+		}
+		return trpcResult, nil
 	}
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("error casting public key to ECDSA")
+	var thetaGetTransactionResult trpc.GetTransactionResult
+	maxRetry := 5
+	for i := 0; i < maxRetry; i++ { // It might take some time for a tx to be finalized, retry a few times
+		rpcRes, rpcErr := client.Call("theta.GetTransaction", trpc.GetTransactionArgs{Hash: hashStr})
+		logger.Debugf("eth_getTransactionReceipt called, Theta rpcRes: %v, rpcErr: %v", rpcRes, rpcErr)
+
+		resultIntf, err := common.HandleThetaRPCResponse(rpcRes, rpcErr, parse)
+		if err != nil {
+			resultMsg := ""
+			if resultIntf != nil {
+				resultMsg = resultIntf.(string)
+			}
+			logger.Errorf("eth_getTransactionReceipt, err: %v, result: %v", err, resultMsg)
+			return result, err
+		}
+
+		thetaGetTransactionResult = resultIntf.(trpc.GetTransactionResult)
+		if thetaGetTransactionResult.Status == rpc.TxStatusFinalized {
+			break
+		}
+
+		errStr := fmt.Sprintf("eth_getTransactionReceipt, tx %v, status: %v", hashStr, thetaGetTransactionResult.Status)
+		logger.Debugf(errStr)
+
+		time.Sleep(blockInterval) // one block duration
+	}
+	if thetaGetTransactionResult.Receipt == nil {
+		return result, nil
 	}
 
-	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	//nonce, _ = c.Nonce(context.Background(), fromAddress.String())
-	nonce -= 1
-	theta := big.NewInt(0)
-	tfuel := big.NewInt(1)
-	fee := big.NewInt(3e17)
-	inputs := []types.TxInput{{
-		Address: fromAddress,
-		Coins: types.Coins{
-			TFuelWei: new(big.Int).Add(tfuel, fee),
-			ThetaWei: theta,
-		},
-		Sequence: uint64(nonce + 1),
-	}}
-	//fmt.Println("receive", nonce+1)
-	outputs := []types.TxOutput{{
-		Address: common.HexToAddress("19E7E376E7C213B7E7e7e46cc70A5dD086DAff3A"),
-		Coins: types.Coins{
-			TFuelWei: tfuel,
-			ThetaWei: theta,
-		},
-	}}
-	sendTx := &types.SendTx{
-		Fee: types.Coins{
-			ThetaWei: new(big.Int).SetUint64(0),
-			TFuelWei: fee,
-		},
-		Inputs:  inputs,
-		Outputs: outputs,
-	}
-	sig, err := thetaPrivateKey.Sign(sendTx.SignBytes("testnet")) //privatenet,testnet
-	if err != nil {
-		log.Fatalln("Failed to sign transaction: %v\n", err)
-	}
-	sendTx.SetSignature(fromAddress, sig)
-
-	raw, err := types.TxToBytes(sendTx)
-	if err != nil {
-		log.Fatalln("Failed to encode transaction: %v\n", err)
-	}
-	signedTx := hex.EncodeToString(raw)
-	var res *jsonrpc.RPCResponse
-	res, err = c.rpcClient.Call("theta.BroadcastRawTransactionAsync", rpc.BroadcastRawTransactionArgs{TxBytes: signedTx})
-	if err != nil {
-		return common.BytesToHash(nil), err
-		log.Fatalln("Failed to broadcast transaction: %v\n", err)
-	}
-	if res.Error != nil {
-		return common.BytesToHash(nil), res.Error
-		log.Fatalln("Server returned error: %v\n", res.Error)
-	}
-	result := &rpc.BroadcastRawTransactionResult{}
-	err = res.GetObject(result)
-	if err != nil {
-		return common.BytesToHash(nil), err
-		log.Fatalln("Failed to parse server response: %v\n", err)
-	}
-	formatted, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		return common.BytesToHash(formatted), err
-		log.Fatalln("Failed to parse server response: %v\n", err)
-	}
-	//fmt.Printf("Successfully broadcasted transaction:\n%s\n", formatted)
-	startTime := time.Now()
-	mutex.Lock()
-	txMap[common.HexToHash(result.TxHash).String()] = startTime
-	mutex.Unlock()
-	CountNum += 1
-	// if CountNum%100 == 0 {
-	// 	fmt.Println("already send ", CountNum)
-	// }
-	fmt.Println("have send ", CountNum, " txs", nonce+1)
-	return common.Hash{}, err //common.BytesToHash(formatted), err
-}
-func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce uint64, to string, value int64, erc20address string, tokenAmount int) (common.Hash, error) {
-
-	privateKey, err := crypto.HexToECDSA(privHex)
-	if err != nil {
-		log.Fatal(err)
+	result.BlockHash = thetaGetTransactionResult.BlockHash
+	result.BlockHeight = hexutil.Uint64(thetaGetTransactionResult.BlockHeight)
+	result.TxHash = thetaGetTransactionResult.TxHash
+	result.GasUsed = hexutil.Uint64(thetaGetTransactionResult.Receipt.GasUsed)
+	result.Logs = make([]common.EthLogObj, len(thetaGetTransactionResult.Receipt.Logs))
+	for i, log := range thetaGetTransactionResult.Receipt.Logs {
+		result.Logs[i] = ThetaLogToEthLog(log)
+		result.Logs[i].BlockHash = result.BlockHash
+		result.Logs[i].BlockHeight = result.BlockHeight
+		result.Logs[i].TxHash = result.TxHash
+		result.Logs[i].LogIndex = hexutil.Uint64(i)
 	}
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("error casting public key to ECDSA")
+	//TODO: handle logIndex & TransactionIndex of logs
+
+	if thetaGetTransactionResult.Receipt.EvmErr == "" {
+		result.Status = 1
+	} else {
+		result.Status = 0
 	}
 
-	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	erc20Instance, err := ct.NewTNT20VoucherContract(common.HexToAddress(erc721address), c.client)
-	if err != nil {
-		return common.BytesToHash([]byte("")), err
-	}
 
-	// gas price
-	gasPrice := c.getGasPriceSuggestion(ctx)
-	nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
-	// address
-	toAddress := common.HexToAddress(to)
-
-	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)
-	// auth.Value = big.NewInt(20000000000000000000) // in wei
-	auth.GasLimit = uint64(3000000) // in units
-	auth.GasPrice = &gasPrice
-
-	res, err := erc20Instance.TransferFrom(auth, fromAddress, toAddress, big.NewInt(int64(tokenAmount)))
-
-	if err != nil {
-		return common.BytesToHash([]byte("")), err
-	}
-
-	return res.Hash(), nil
+	return result, nil
 }
 func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
 
@@ -561,6 +496,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	}
 	return res.Hash(), nil
 }
+
 func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
 
 	//fmt.Println("send1", nonce+1, "send2", nonce+2)
