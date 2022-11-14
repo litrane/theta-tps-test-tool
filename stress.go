@@ -124,9 +124,9 @@ func ethStressTest(client *[]EthClient, ctx context.Context) {
 	if concurrency > MaxConcurrency {
 		logger.Warn(fmt.Sprintf("concurrency setting is over logical max(%d)", MaxConcurrency))
 	}
-	for i := 0; i < concurrency; i++ {
-		go worker.Run(&queue, i)
-	}
+
+	go worker.Run(&queue, clientID)
+
 
 	go func() {
 		count := 0

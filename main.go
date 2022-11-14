@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,9 +59,16 @@ var (
 	countChainTx2    = big.NewInt(0)
 	txMapCrossChain  map[string]time.Time
 	client_number    = concurrency
+	clientID         int
+	crossPercentage  = 100
 )
 
 func main() {
+	if len(os.Args) == 1 {
+		clientID, _ = strconv.Atoi(os.Args[0])
+	} else {
+		fmt.Println("Wrong Input Arguments!")
+	}
 	txMap = make(map[string]time.Time)
 	txMapCrossChain = make(map[string]time.Time)
 	go func() {
@@ -96,15 +105,9 @@ func main() {
 	//开始进行压测
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-	if model == "ERC20" {
-		erc20StressTest(&client, ctx) //ERC20转账测试（目前已废弃）
-	} else if model == "CrossChainTNT20" { //链间交易测试
-		crossChainTNT20StressTest(&client_list, ctx)
-	} else if model == "CrossSubChainTNT20" { //链内lock测试
-		crossSubChainTNT20StressTest(&client_list, ctx)
-	} else {
-		ethStressTest(&client_list, ctx) //Theta普通转账（非合约）交易测试
-	}
+
+	crossSubChainTNT20StressTest(&client_list, ctx)
+
 	var newclient EthClient
 	if model == "CrossChainTNT20" {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
