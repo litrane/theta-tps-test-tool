@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -141,6 +142,70 @@ type GetAccountArgs struct {
 type GetAccountResult struct {
 	*types.Account
 	Address string `json:"address"`
+}
+type EthGetTransactionResult struct {
+	BlockHash        tcommon.Hash     `json:"blockHash"`
+	BlockHeight      hexutil.Uint64   `json:"blockNumber"`
+	From             tcommon.Address  `json:"from"`
+	To               *tcommon.Address `json:"to"`
+	Gas              hexutil.Uint64   `json:"gas"`
+	GasPrice         string           `json:"gasPrice"`
+	TxHash           tcommon.Hash     `json:"hash"`
+	Nonce            hexutil.Uint64   `json:"nonce"`
+	Input            string           `json:"input"`
+	TransactionIndex hexutil.Uint64   `json:"transactionIndex"`
+	Value            string           `json:"value"`
+	V                hexutil.Uint64   `json:"v"` //ECDSA recovery id
+	R                tcommon.Hash     `json:"r"` //ECDSA signature r
+	S                tcommon.Hash     `json:"s"` //ECDSA signature s
+}
+type GetTransactionResult struct {
+	BlockHash      common.Hash                       `json:"block_hash"`
+	BlockHeight    common.JSONUint64                 `json:"block_height"`
+	Status         TxStatus                          `json:"status"`
+	TxHash         common.Hash                       `json:"hash"`
+	Type           byte                              `json:"type"`
+	Tx             types.Tx                          `json:"transaction"`
+	Receipt        *blockchain.TxReceiptEntry        `json:"receipt"`
+	BalanceChanges *blockchain.TxBalanceChangesEntry `json:"blance_changes"`
+}
+type TxStatus string
+type EthLogObj struct {
+	Address          tcommon.Address `json:"address"`
+	BlockHash        tcommon.Hash    `json:"blockHash"`
+	BlockHeight      hexutil.Uint64  `json:"blockNumber"`
+	LogIndex         hexutil.Uint64  `json:"logIndex"`
+	Topics           []tcommon.Hash  `json:"topics"`
+	TxHash           tcommon.Hash    `json:"transactionHash"`
+	TransactionIndex hexutil.Uint64  `json:"transactionIndex"`
+	Data             string          `json:"data"`
+	Type             string          `json:"type"`
+	//Removed          bool            `json:"removed"`
+
+}
+
+func ThetaLogToEthLog(log *types.Log) EthLogObj {
+	result := EthLogObj{}
+	result.Address = log.Address
+	result.Data = "0x" + hex.EncodeToString(log.Data)
+	result.Type = "mined"
+	result.Topics = log.Topics
+	return result
+}
+
+type EthGetReceiptResult struct {
+	BlockHash         tcommon.Hash    `json:"blockHash"`
+	BlockHeight       hexutil.Uint64  `json:"blockNumber"`
+	TxHash            tcommon.Hash    `json:"transactionHash"`
+	TransactionIndex  hexutil.Uint64  `json:"transactionIndex"`
+	ContractAddress   tcommon.Address `json:"contractAddress"`
+	From              tcommon.Address `json:"from"`
+	To                tcommon.Address `json:"to"`
+	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
+	Logs              []EthLogObj     `json:"logs"`
+	LogsBloom         string          `json:"logsBloom"`
+	Status            hexutil.Uint64  `json:"status"`
 }
 
 const RawABI = `

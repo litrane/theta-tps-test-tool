@@ -15,6 +15,7 @@ import (
 	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/pkg/errors"
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/common/hexutil"
 
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
@@ -333,13 +334,13 @@ func (c *EthClient) getGasPriceSuggestion(ctx context.Context) big.Int {
 	return *gasPrice
 
 }
-func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (interface{}, error) {
-	logger.Infof("eth_getTransactionReceipt called, txHash: %v", hashStr)
+func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (EthGetReceiptResult, error) {
+	//logger.Infof("eth_getTransactionReceipt called, txHash: %v", hashStr)
 
-	result := common.EthGetReceiptResult{}
+	result := EthGetReceiptResult{}
 
 	parse := func(jsonBytes []byte) (interface{}, error) {
-		trpcResult := trpc.GetTransactionResult{}
+		trpcResult := rpc.GetTransactionResult{}
 		json.Unmarshal(jsonBytes, &trpcResult)
 		var objmap map[string]json.RawMessage
 		json.Unmarshal(jsonBytes, &objmap)
@@ -350,42 +351,37 @@ func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (
 				result.From = tx.Inputs[0].Address
 				result.To = tx.Outputs[0].Address
 			}
-			if types.TxType(trpcResult.Type) == types.TxSmartContract {
-				tx := types.SmartContractTx{}
-				json.Unmarshal(objmap["transaction"], &tx)
-				result.From = tx.From.Address
-				result.To = tx.To.Address
-				result.ContractAddress = trpcResult.Receipt.ContractAddress
-			}
+			// if types.TxType(trpcResult.Type) == types.TxSmartContract {
+			// 	tx := types.SmartContractTx{}
+			// 	json.Unmarshal(objmap["transaction"], &tx)
+			// 	result.From = tx.From.Address
+			// 	result.To = tx.To.Address
+			// 	result.ContractAddress = trpcResult.Receipt.ContractAddress
+			// }
 		}
 		return trpcResult, nil
 	}
 
-	var thetaGetTransactionResult trpc.GetTransactionResult
-	maxRetry := 5
-	for i := 0; i < maxRetry; i++ { // It might take some time for a tx to be finalized, retry a few times
-		rpcRes, rpcErr := client.Call("theta.GetTransaction", trpc.GetTransactionArgs{Hash: hashStr})
-		logger.Debugf("eth_getTransactionReceipt called, Theta rpcRes: %v, rpcErr: %v", rpcRes, rpcErr)
+	var thetaGetTransactionResult rpc.GetTransactionResult
+	//maxRetry := 5
+	for i := 0; i >= 0; i++ { // It might take some time for a tx to be finalized, retry a few times
+		rpcRes, rpcErr := c.rpcClient.Call("theta.GetTransaction", rpc.GetTransactionArgs{Hash: hashStr})
 
-		resultIntf, err := common.HandleThetaRPCResponse(rpcRes, rpcErr, parse)
+		resultIntf, err := HandleThetaRPCResponse(rpcRes, rpcErr, parse)
 		if err != nil {
 			resultMsg := ""
 			if resultIntf != nil {
 				resultMsg = resultIntf.(string)
 			}
-			logger.Errorf("eth_getTransactionReceipt, err: %v, result: %v", err, resultMsg)
+			fmt.Printf("eth_getTransactionReceipt, err: %v, result: %v", err, resultMsg)
 			return result, err
 		}
 
-		thetaGetTransactionResult = resultIntf.(trpc.GetTransactionResult)
+		thetaGetTransactionResult = resultIntf.(rpc.GetTransactionResult)
 		if thetaGetTransactionResult.Status == rpc.TxStatusFinalized {
 			break
 		}
-
-		errStr := fmt.Sprintf("eth_getTransactionReceipt, tx %v, status: %v", hashStr, thetaGetTransactionResult.Status)
-		logger.Debugf(errStr)
-
-		time.Sleep(blockInterval) // one block duration
+		//time.Sleep(1 * time.Second) // one block duration
 	}
 	if thetaGetTransactionResult.Receipt == nil {
 		return result, nil
@@ -395,7 +391,7 @@ func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (
 	result.BlockHeight = hexutil.Uint64(thetaGetTransactionResult.BlockHeight)
 	result.TxHash = thetaGetTransactionResult.TxHash
 	result.GasUsed = hexutil.Uint64(thetaGetTransactionResult.Receipt.GasUsed)
-	result.Logs = make([]common.EthLogObj, len(thetaGetTransactionResult.Receipt.Logs))
+	result.Logs = make([]EthLogObj, len(thetaGetTransactionResult.Receipt.Logs))
 	for i, log := range thetaGetTransactionResult.Receipt.Logs {
 		result.Logs[i] = ThetaLogToEthLog(log)
 		result.Logs[i].BlockHash = result.BlockHash
@@ -411,7 +407,6 @@ func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (
 	} else {
 		result.Status = 0
 	}
-
 
 	return result, nil
 }
@@ -471,11 +466,12 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
-
-	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
+	time.Sleep(1 * time.Second)
+	receipt, err := c.GetTransactionReceipt(context.Background(), res.Hash().String())
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if receipt.Status != 1 {
 		log.Fatal("lock error")
 	}
@@ -536,7 +532,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 
 	//_, err1 := subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(99999999))
 	//fmt.Println(err1)
-	time.Sleep(50 * time.Millisecond)
+	//time.Sleep(50 * time.Millisecond)
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
 	//auth.Nonce = big.NewInt(int64(nonce + 1))
 	auth.Value = crossChainFee
