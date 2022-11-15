@@ -462,7 +462,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// if err != nil {
 	// 	return common.BytesToHash([]byte("")), err
 	// }
-	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(360777), subchainTNT20Address, fromAddress, big.NewInt(1))
+	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(366), subchainTNT20Address, fromAddress, big.NewInt(1))
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
@@ -475,7 +475,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	if receipt.Status != 1 {
 		log.Fatal("lock error")
 	}
-	lockNonce, _ := erc20TokenBank.TokenLockNonceMap(nil, big.NewInt(360777))
+	lockNonce, _ := erc20TokenBank.TokenLockNonceMap(nil, big.NewInt(366))
 	fmt.Println("lock", lockNonce)
 	startTime := time.Now()
 	mutex.Lock()
