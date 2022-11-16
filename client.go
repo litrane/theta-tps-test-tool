@@ -441,18 +441,12 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = common.Big0
 	// auth.Value = big.NewInt(20000000000000000000) // in wei
 	auth.GasLimit = uint64(3000000) // in units
 	auth.GasPrice = &gasPrice
 
-	_, err = subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
-	if err != nil {
-		return common.BytesToHash([]byte("")), err
-	}
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
-	auth.Nonce = big.NewInt(int64(nonce + 1))
+	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = crossChainFee
 	//time.Sleep(1 * time.Second)
 	//fmt.Println(subchainTNT20Instance.Allowance(nil, fromAddress, common.HexToAddress(contractAddress)))
