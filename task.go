@@ -41,9 +41,9 @@ func (t *EthTask) IncrementTryCount() error {
 func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce uint64, queue *tps.Queue, logger tps.Logger, contractAddress string) error {
 	//根据不同的model生成不同的发送交易的任务
 	var rootErr error
-	if model == "CrossChain" {
+	if t.transfer_type == "CrossChain" {
 		_, rootErr = client.CrossChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1) //链间交易
-	} else if model == "Inchain" {
+	} else if t.transfer_type == "InChain" {
 		_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1) //链内TNT20
 	} else {
 		logger.Fatal("err model")

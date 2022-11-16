@@ -36,9 +36,9 @@ var dec18, _ = new(big.Int).SetString("1000000000000000000", 10)
 var crossChainFee = new(big.Int).Mul(big.NewInt(10), dec18)
 
 type EthClient struct {
-	rpcClient *jsonrpc.RPCClient //theta-rpc
-	client    *ethclient.Client  //eth-adaptor
-
+	rpcClient     *jsonrpc.RPCClient //theta-rpc
+	client        *ethclient.Client  //eth-adaptor
+	transfer_type string
 }
 
 func NewClient(rpcClientUrl, ethClientUrl string) (c EthClient, err error) { //,theta-url,eth-url
@@ -75,7 +75,7 @@ func (c EthClient) LatestBlockHeight(ctx context.Context) (uint64, error) {
 
 }
 
-func parse(jsonBytes []byte) (int, time.Duration, error) {
+func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 	trpcResult := ThetaGetBlockResult{}
 	json.Unmarshal(jsonBytes, &trpcResult)
 	result := 0
@@ -91,7 +91,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 		json.Unmarshal(objmap["transactions"], &txmaps)
 		for i, value := range txmaps {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
-				if model == "CrossChain" {
+				if transfer_type == "CrossChain" {
 					var test RPCResult
 					fmt.Println(string(value["receipt"]))
 					json.Unmarshal(value["receipt"], &test)
@@ -119,7 +119,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 						fmt.Println("find", event.Denom)
 						mutex.Lock()
 
-						startTime, ok := txMapCrossChain[event.VoucherMintNonce.String()]
+						startTime, ok := txMapCrossChain[+","+event.VoucherMintNonce.String()]
 						if ok {
 							countChainTx2.Add(event.VoucherMintNonce, big.NewInt(1))
 							mutex.Unlock()
@@ -131,7 +131,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 						}
 					}
 
-				} else if model == "Inchain" {
+				} else if transfer_type == "InChain" {
 					mutex.Lock()
 					//fmt.Println(common.value["hash"].String())
 					//var hash string
@@ -155,11 +155,14 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 						strings1[i] = numberString[1]
 						fmt.Println(numberString)
 					}
-					startTime, ok := txMap[strings.ToUpper(strings1[0])+fmt.Sprint(numbers[0])]
+					startTime, ok := txMap2[strings.ToUpper(strings1[0])+","+fmt.Sprint(numbers[0])]
+					fmt.Println("find!", strings.ToUpper(strings1[0])+fmt.Sprint(numbers[0]))
+					mutex.Unlock()
 					if ok {
 						//fmt.Println(trpcResult.Txs[i].Hash)
 						fmt.Println("start ", startTime, "end-start", time.Since(startTime))
-						mutex.Unlock()
+
+						fmt.Println("latency is", time.Since(startTime))
 						elapsedTime = elapsedTime + (time.Since(startTime) / time.Millisecond)
 						//fmt.Println(time.Since(startTime) / time.Second)
 						//fmt.Println(elapsedTime)
@@ -197,7 +200,7 @@ func (c EthClient) CountTx(ctx context.Context, height uint64) (int, time.Durati
 	jsonBytes, err = json.MarshalIndent(rpcResult.Result, "", "    ")
 
 	//logger.Infof("HandleThetaRPCResponse, jsonBytes: %v", strin(jsonBytes))
-	result, avg_latency, err := parse(jsonBytes)
+	result, avg_latency, err := parse(jsonBytes, c.transfer_type)
 	//totalTime := time.Since(startTime) / time.Millisecond
 	//fmt.Println("call and parse consume ", totalTime)
 	return result, avg_latency, nil
@@ -447,12 +450,12 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	auth.GasLimit = uint64(3000000) // in units
 	auth.GasPrice = &gasPrice
 
-	_, err = subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
-	if err != nil {
-		return common.BytesToHash([]byte("")), err
-	}
+	// _, err = subchainTNT20Instance.Approve(auth, common.HexToAddress(contractAddress), big.NewInt(100))
+	// if err != nil {
+	// 	return common.BytesToHash([]byte("")), err
+	// }
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
-	auth.Nonce = big.NewInt(int64(nonce + 1))
+	//auth.Nonce = big.NewInt(int64(nonce ))
 	auth.Value = crossChainFee
 	//time.Sleep(1 * time.Second)
 	//fmt.Println(subchainTNT20Instance.Allowance(nil, fromAddress, common.HexToAddress(contractAddress)))
@@ -479,7 +482,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	fmt.Println("lock", lockNonce)
 	startTime := time.Now()
 	mutex.Lock()
-	txMapCrossChain[lockNonce.String()] = startTime
+	txMapCrossChain[strings.ToUpper(fromAddress.Hex())+","+lockNonce.String()] = startTime
 	mutex.Unlock()
 	fmt.Println("success")
 	// fmt.Println(receipt.Logs)
@@ -508,7 +511,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	}
 
 	fromAddress := pubkeyToAddress(*publicKeyECDSA)
-	subchainTNT20Address := common.HexToAddress("0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337") // subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
+	subchainTNT20Address := common.HexToAddress("0x47c5e40890bcE4a473A49D7501808b9633F29782") // subchain 0x5C3159dDD2fe0F9862bC7b7D60C1875fa8F81337 mainchain 0x59AF421cB35fc23aB6C8ee42743e6176040031f4
 	erc20TokenBank, err := ct.NewTNT20TokenBank(common.HexToAddress(contractAddress), c.client)
 	//subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, c.client)
 	if err != nil {
@@ -544,7 +547,7 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
-	//time.Sleep(50 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	// receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -552,11 +555,11 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	// if receipt.Status != 1 {
 	// 	log.Fatal("lock error")
 	// }
-	// fmt.Println("success")
+	fmt.Println("success", strings.ToUpper(fromAddress.Hex())+fmt.Sprint(nonce))
 	startTime := time.Now()
 	//mutex.Lock()
 	//fmt.Println(res.Hash().String())
-	txMap[strings.ToUpper(fromAddress.Hex())+fmt.Sprint(nonce+1)] = startTime
+	txMap2[strings.ToUpper(fromAddress.Hex())+","+fmt.Sprint(nonce+1)] = startTime
 	//mutex.Unlock()
 	CountNum += 1
 	if CountNum%100 == 0 {
