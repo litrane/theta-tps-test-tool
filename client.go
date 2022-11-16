@@ -467,7 +467,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 		return common.BytesToHash([]byte("")), err
 	}
 	time.Sleep(1 * time.Second)
-	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
+	receipt, err := c.GetTransactionReceipt(context.Background(), res.Hash().Hex())
 	if err != nil {
 		log.Fatal(err)
 	}
