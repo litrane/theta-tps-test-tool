@@ -93,11 +93,11 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
 				if transfer_type == "CrossChain" {
 					var test RPCResult
-					fmt.Println(string(value["receipt"]))
+					//fmt.Println(string(value["receipt"]))
 					json.Unmarshal(value["receipt"], &test)
 					if len(test.Result) != 0 {
-						fmt.Println(test.Result[1].Topics)
-						fmt.Println(crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
+						//fmt.Println(test.Result[1].Topics)
+						//fmt.Println(crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 						type TransferEvt struct {
 							Denom                      string
 							TargetChainVoucherReceiver common.Address
@@ -115,19 +115,19 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 						if err != nil {
 							fmt.Println(err)
 						}
-						fmt.Println("find", event.VoucherMintNonce)
-						fmt.Println("find", event.Denom)
-						mutex.Lock()
 
-						startTime, ok := txMapCrossChain[+","+event.VoucherMintNonce.String()]
+						mutex.Lock()
+						startTime, ok := txMapCrossChain[event.Denom[0:6]+","+event.VoucherMintNonce.String()]
+						mutex.Unlock()
+						fmt.Println("CrossChain read", event.Denom[0:6]+","+event.VoucherMintNonce.String())
 						if ok {
 							countChainTx2.Add(event.VoucherMintNonce, big.NewInt(1))
-							mutex.Unlock()
 							elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
 							fmt.Println("latency is", time.Since(startTime))
 							result += 1
 						} else {
-							fmt.Println("unfind!", event.VoucherMintNonce)
+							fmt.Println("unfind!", event.Denom[0:6]+","+event.VoucherMintNonce.String())
+							result += 1
 						}
 					}
 
@@ -136,7 +136,7 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 					//fmt.Println(common.value["hash"].String())
 					//var hash string
 					//json.Unmarshal(value["raw"], &hash)
-					fmt.Println(string(value["raw"]))
+					//fmt.Println(string(value["raw"]))
 					pattern := regexp.MustCompile(`"sequence": "(\d+)"`)
 					numberStrings := pattern.FindAllStringSubmatch(string(value["raw"]), -1)
 					numbers := make([]int, len(numberStrings))
@@ -156,11 +156,11 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 						fmt.Println(numberString)
 					}
 					startTime, ok := txMap2[strings.ToUpper(strings1[0])+","+fmt.Sprint(numbers[0])]
-					fmt.Println("find!", strings.ToUpper(strings1[0])+fmt.Sprint(numbers[0]))
+					fmt.Println("Inchain read ", strings.ToUpper(strings1[0])+","+fmt.Sprint(numbers[0]))
 					mutex.Unlock()
 					if ok {
 						//fmt.Println(trpcResult.Txs[i].Hash)
-						fmt.Println("start ", startTime, "end-start", time.Since(startTime))
+						//fmt.Println("start ", startTime, "end-start", time.Since(startTime))
 
 						fmt.Println("latency is", time.Since(startTime))
 						elapsedTime = elapsedTime + (time.Since(startTime) / time.Millisecond)
@@ -168,7 +168,7 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 						//fmt.Println(elapsedTime)
 						result += 1
 					} else {
-						fmt.Println("unfind!", numbers[0])
+						fmt.Println("unfind! ", "Inchain read ", strings.ToUpper(strings1[0])+","+fmt.Sprint(numbers[0]))
 					}
 
 				}
@@ -416,6 +416,7 @@ func (c *EthClient) GetTransactionReceipt(ctx context.Context, hashStr string) (
 func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
 
 	privateKey, err := crypto.HexToECDSA(privHex)
+	//fmt.Println("privateKey", privHex)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -469,22 +470,22 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
-	time.Sleep(1 * time.Second)
-	receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
-	if err != nil {
-		log.Fatal(err)
-	}
+	time.Sleep(800 * time.Millisecond)
+	// receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	if receipt.Status != 1 {
-		log.Fatal("lock error")
-	}
+	// if receipt.Status != 1 {
+	// 	log.Fatal("lock error")
+	// }
 	lockNonce, _ := erc20TokenBank.TokenLockNonceMap(nil, big.NewInt(366))
 	fmt.Println("lock", lockNonce)
 	startTime := time.Now()
 	mutex.Lock()
-	txMapCrossChain[strings.ToUpper(fromAddress.Hex())+","+lockNonce.String()] = startTime
+	txMapCrossChain[chainID.String()+","+lockNonce.String()] = startTime
 	mutex.Unlock()
-	fmt.Println("success")
+	fmt.Println("success CrossChain write ", chainID.String()+","+lockNonce.String())
 	// fmt.Println(receipt.Logs)
 	// fmt.Println(receipt.Logs[2].Data)
 	//resolveNum := Resolve(receipt.Logs[2].Data)
@@ -497,7 +498,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 }
 
 func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
-
+	//fmt.Println("privateKey", privHex)
 	//fmt.Println("send1", nonce+1, "send2", nonce+2)
 	privateKey, err := crypto.HexToECDSA(privHex)
 	if err != nil {
@@ -547,7 +548,16 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
-	time.Sleep(50 * time.Millisecond)
+	//time.Sleep(1 * time.Second)
+
+	fmt.Println("success Inchain write ", strings.ToUpper(fromAddress.Hex())+","+fmt.Sprint(nonce+1))
+	startTime := time.Now()
+	//mutex.Lock()
+	//fmt.Println(res.Hash().String())
+	txMap2[strings.ToUpper(fromAddress.Hex())+","+fmt.Sprint(nonce+1)] = startTime
+	//mutex.Unlock()
+	CountNum += 1
+	time.Sleep(800 * time.Millisecond)
 	// receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -555,13 +565,6 @@ func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex strin
 	// if receipt.Status != 1 {
 	// 	log.Fatal("lock error")
 	// }
-	fmt.Println("success", strings.ToUpper(fromAddress.Hex())+fmt.Sprint(nonce))
-	startTime := time.Now()
-	//mutex.Lock()
-	//fmt.Println(res.Hash().String())
-	txMap2[strings.ToUpper(fromAddress.Hex())+","+fmt.Sprint(nonce+1)] = startTime
-	//mutex.Unlock()
-	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
 	}

@@ -53,11 +53,11 @@ var (
 
 	model = "CrossChainTNT20" //压测类型
 
-	addr_priv     = make(map[string]string, len(privs))
-	erc721address = "0x0000000000000000000000000000000000000009"
-	client        EthClient
-	txMap         map[string]time.Time
-	txMap2         map[string]time.Time
+	addr_priv        = make(map[string]string, len(privs))
+	erc721address    = "0x0000000000000000000000000000000000000009"
+	client           EthClient
+	txMap            map[string]time.Time
+	txMap2           map[string]time.Time
 	avgLatency       time.Duration
 	mutex            sync.Mutex
 	CountNum         int
@@ -69,13 +69,15 @@ var (
 	txMapCrossChain  map[string]time.Time
 	client_number    = 4
 	clientID         int
-	crossPercentage  = 10
+	crossPercentage  = 2
 )
 
 func main() {
-	if len(os.Args) == 3 {
+	if len(os.Args) == 4 {
 		clientID, _ = strconv.Atoi(os.Args[1])
 		model = os.Args[2]
+		chainInt, _ := strconv.Atoi(os.Args[3])
+		chainID = big.NewInt(int64(chainInt))
 	} else {
 		fmt.Println("Wrong Input Arguments!")
 	}
@@ -122,7 +124,7 @@ func main() {
 	newclient1.transfer_type = "CrossChain"
 	//开始TPS以及延迟测量
 	fmt.Println("-----------Start Measuring----------")
-	// go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
+	go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
 
 	newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	newclient2.transfer_type = "InChain"
