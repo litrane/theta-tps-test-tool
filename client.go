@@ -125,6 +125,7 @@ func parse(jsonBytes []byte) (int, time.Duration, error) {
 							mutex.Unlock()
 							elapsedTime = elapsedTime + time.Since(startTime)/time.Millisecond
 							fmt.Println("latency is", time.Since(startTime))
+							fmt.Println("cur time is ", time.Now().UnixNano())
 							result += 1
 						} else {
 							fmt.Println("unfind!", event.VoucherMintNonce)
@@ -479,7 +480,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// fmt.Println(receipt.Logs)
 	// fmt.Println(receipt.Logs[2].Data)
 	//resolveNum := Resolve(receipt.Logs[2].Data)
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
