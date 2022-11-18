@@ -21,10 +21,10 @@ const (
 )
 
 var (
-	// ThetaRpc         = []string{"http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc"}
-	// EthRpc           = []string{"http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc"} // testnet
-	ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
-	EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
+	ThetaRpc = []string{"http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc"}
+	EthRpc   = []string{"http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc"} // testnet
+	// ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
+	// EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
@@ -74,9 +74,10 @@ var (
 	crossPercentage  = 100
 )
 
-func hugeBanner(content string) {
+func hugeBanner(content string, phase int) {
 	fmt.Println("")
 	fmt.Println("")
+	fmt.Println("Entering phase ", phase)
 	fmt.Println(" ######################################################### ")
 	fmt.Println("#                           ", content, "                              #")
 	fmt.Println("#  _    _      _ _         _______ _          _           #")
@@ -113,17 +114,17 @@ func main() {
 		time.Sleep(mesuringDuration * 2)
 	}()
 	go func() {
-		defer hugeBanner("Malicious node is on!")
+		defer hugeBanner("Malicious node is on!", 1)
 		// defer fmt.Println("--------------------------------Malicious node is on!-----------------------------------")
 		time.Sleep(60 * time.Second)
 	}()
 	go func() {
-		defer hugeBanner("Timing issue is on!")
+		defer hugeBanner("Timing issue is on!", 2)
 		// defer fmt.Println("--------------------------------Timing issue is on!--------------------------------")
 		time.Sleep(120 * time.Second)
 	}()
 	go func() {
-		defer hugeBanner("Timing issue is off!")
+		defer hugeBanner("Timing issue is off!", 3)
 		// defer fmt.Println("--------------------------------Timing issue is off!--------------------------------")
 		time.Sleep(180 * time.Second)
 	}()
@@ -156,8 +157,8 @@ func main() {
 	var newclient EthClient
 	if model == "CrossChain" {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc")
-		// newclient, err = NewClient("http://10.10.1.2:16888/rpc", "http://10.10.1.2:18888/rpc")
+		// newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc")
+		newclient, err = NewClient("http://10.10.1.2:16888/rpc", "http://10.10.1.2:18888/rpc")
 		// subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	} else {
 		//否则就用第一个client监测
