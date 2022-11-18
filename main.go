@@ -21,13 +21,13 @@ const (
 )
 
 var (
-	ThetaRpc = []string{"http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc"}
-	EthRpc   = []string{"http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc"} // testnet
-	// ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
-	// EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
+	// ThetaRpc = []string{"http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc", "http://10.10.1.5:16900/rpc"}
+	// EthRpc   = []string{"http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc", "http://10.10.1.5:19888/rpc"} // testnet
+	ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
+	EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
-	mesuringDuration = 120 * time.Second //执行数据时间
+	mesuringDuration = 240 * time.Second //执行数据时间
 	queueSize        = 999999            //队列大小
 	concurrency      = 1                 //并发数量
 	queue            = tps.NewQueue(queueSize)
@@ -111,7 +111,8 @@ func main() {
 	go func() {
 		//统计tps结束时间
 		defer atomic.AddUint32(&tpsClosing, 1)
-		time.Sleep(mesuringDuration * 2)
+		// time.Sleep(mesuringDuration * 2)
+		time.Sleep(300 * time.Second)
 	}()
 	go func() {
 		defer hugeBanner("Malicious node is on!", 1)
@@ -158,7 +159,7 @@ func main() {
 	if model == "CrossChain" {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
 		// newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc")
-		newclient, err = NewClient("http://10.10.1.2:16888/rpc", "http://10.10.1.2:18888/rpc")
+		newclient, err = NewClient("http://128.110.96.161:16888/rpc", "http://128.110.96.161:18888/rpc")
 		// subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	} else {
 		//否则就用第一个client监测

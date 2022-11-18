@@ -480,7 +480,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// fmt.Println(receipt.Logs)
 	// fmt.Println(receipt.Logs[2].Data)
 	//resolveNum := Resolve(receipt.Logs[2].Data)
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
