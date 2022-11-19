@@ -5,9 +5,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"log"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync/atomic"
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
@@ -132,13 +129,13 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 		// if(key==0){
 		// 	continue;
 		// }
-		if len(privsGroup) < key/client_number+1 {
+		if len(privsGroup) < key/(len(privs)/client_number)+1 {
 			privsGroup = append(privsGroup, []string{})
 		}
-		if len(addrs) < key/client_number+1 {
+		if len(addrs) < key/(len(privs)/client_number)+1 {
 			addrs = append(addrs, []string{})
 		}
-		privsGroup[key/client_number] = append(privsGroup[key/client_number], value)
+		privsGroup[key/(len(privs)/client_number)] = append(privsGroup[key/(len(privs)/client_number)], value)
 		privateKey, err := crypto.HexToECDSA(value)
 
 		if err != nil {
@@ -152,7 +149,7 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		addrs[key/client_number] = append(addrs[key/client_number], fromAddress.Hex())
+		addrs[key/(len(privs)/client_number)] = append(addrs[key/(len(privs)/client_number)], fromAddress.Hex())
 	}
 
 	var wallet_list []tps.Wallet
@@ -164,7 +161,7 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 		wallet_list = append(wallet_list, wallet_single)
 	}
 
-	var err error
+	//var err error
 	taskDo := func(t tps.Task, id int) error {
 		task, ok := t.(*EthTask)
 		if !ok {
@@ -178,39 +175,40 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 			priv         = wallet_list[id].Priv(int(wallet_list[id].SendCount()) % wallet_list[id].PrivsLength())
 			currentNonce = wallet_list[id].CurrentNonce(priv)
 		)
-
-		err = task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, TokenBankAddress)
+		_ = task.Do(ctx, &(*client)[id], priv, currentNonce, &queue, logger, TokenBankAddress)
 		wallet_list[id].IncrementNonce(priv)
 		//wallet_list[id].IncrementNonce(priv)
 		wallet_list[id].IncrementSendCount()
-		if err != nil {
-			if strings.Contains(err.Error(), "ValidateInputAdvanced: Got") {
-				pattern := regexp.MustCompile(`(\d+)`)
-				numberStrings := pattern.FindAllStringSubmatch(err.Error(), -1)
-				numbers := make([]int, len(numberStrings))
-				for i, numberString := range numberStrings {
-					number, err := strconv.Atoi(numberString[1])
-					if err != nil {
-						panic(err)
-					}
-					numbers[i] = number
-				}
-				wallet_list[id].RecetNonce(priv, uint64(numbers[3]))
-				fmt.Println("Restnonce is", wallet_list[id].CurrentNonce(priv))
-				return nil
-			}
-			if errors.Is(err, tps.ErrWrongNonce) {
-				wallet_list[id].RecetNonce(priv, currentNonce)
-				task.tryCount = 0
-				queue.Push(task)
-				return nil
-			}
-			if errors.Is(err, tps.ErrTaskRetry) {
-				wallet_list[id].IncrementNonce(priv)
-				return nil
-			}
-			return errors.Wrap(err, "err Do")
-		}
+		// if err != nil {
+		// 	if strings.Contains(err.Error(), "ValidateInputAdvanced: Got") {
+		// 		pattern := regexp.MustCompile(`(\d+)`)
+		// 		numberStrings := pattern.FindAllStringSubmatch(err.Error(), -1)
+		// 		numbers := make([]int, len(numberStrings))
+		// 		for i, numberString := range numberStrings {
+		// 			number, err := strconv.Atoi(numberString[1])
+		// 			if err != nil {
+		// 				panic(err)
+		// 			}
+		// 			numbers[i] = number
+		// 		}
+		// 		wallet_list[id].RecetNonce(priv, uint64(numbers[3]))
+		// 		fmt.Println("Restnonce is", wallet_list[id].CurrentNonce(priv))
+		// 		return nil
+		// 	}
+		// 	if errors.Is(err, tps.ErrWrongNonce) {
+		// 		wallet_list[id].RecetNonce(priv, currentNonce)
+		// 		fmt.Println("Restnonce is", currentNonce)
+		// 		task.tryCount = 0
+		// 		queue.Push(task)
+		// 		return nil
+		// 	}
+		// 	if errors.Is(err, tps.ErrTaskRetry) {
+		// 		wallet_list[id].IncrementNonce(priv)
+		// 		fmt.Println("IncrementNonce is", currentNonce)
+		// 		return nil
+		// 	}
+		// 	return errors.Wrap(err, "err Do")
+		// }
 
 		return nil
 	}
@@ -233,21 +231,25 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 			if queue.CountTasks() > queueSize {
 				continue
 			}
-			if(count%crossPercentage==0){
-				queue.Push(&EthTask{
-					to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-					amount:  1,
-					tokenId: int64(count),
-					transfer_type: "CrossChain",
-				})
-			}else{
-				queue.Push(&EthTask{
-					to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-					amount:  1,
-					tokenId: int64(count),
-					transfer_type: "InChain",
-				})
+			if count == 10000 {
+				fmt.Println("have send 1000")
+				break
 			}
+			// if count%crossPercentage == 0 {
+			// 	queue.Push(&EthTask{
+			// 		to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+			// 		amount:        1,
+			// 		tokenId:       int64(count),
+			// 		transfer_type: "CrossChain",
+			// 	})
+			// } else {
+			queue.Push(&EthTask{
+				to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+				amount:        1,
+				tokenId:       int64(count),
+				transfer_type: "InChain",
+			})
+			// }
 			count++
 		}
 	}()

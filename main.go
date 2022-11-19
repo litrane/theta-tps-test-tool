@@ -67,17 +67,19 @@ var (
 	countChainTx1    = big.NewInt(0)
 	countChainTx2    = big.NewInt(0)
 	txMapCrossChain  map[string]time.Time
-	client_number    = 4
+	client_number    = 16
 	clientID         int
-	crossPercentage  = 2
+	crossPercentage  = 1000
+	interval         int
 )
 
 func main() {
-	if len(os.Args) == 4 {
+	if len(os.Args) == 5 {
 		clientID, _ = strconv.Atoi(os.Args[1])
 		model = os.Args[2]
 		chainInt, _ := strconv.Atoi(os.Args[3])
 		chainID = big.NewInt(int64(chainInt))
+		interval, _ = strconv.Atoi(os.Args[4])
 	} else {
 		fmt.Println("Wrong Input Arguments!")
 	}
@@ -88,6 +90,7 @@ func main() {
 		//停止发送交易时间
 		defer atomic.AddUint32(&closing, 1)
 		time.Sleep(mesuringDuration)
+		fmt.Println("-------------------Total num", CountNum)
 	}()
 
 	go func() {
@@ -101,7 +104,7 @@ func main() {
 	for i := 0; i < client_number; i++ {
 		var client EthClient
 
-		client, err = NewClient(ThetaRpc[i], EthRpc[i])
+		client, err = NewClient(ThetaRpc[0], EthRpc[0])
 
 		if err != nil {
 			logger.Fatal("err NewClient: ", err)
@@ -116,23 +119,26 @@ func main() {
 	defer cancel()
 
 	crossSubChainTNT20StressTest(&client_list, ctx)
+	if clientID == 0 {
+		var newclient1 EthClient
+		var newclient2 EthClient
+		//在跨链测试时需要开一个新的client在另一条链进行监测
+		newclient1, err = NewClient("http://10.10.1.1:16888/rpc", "http://10.10.1.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient1.transfer_type = "CrossChain"
+		//开始TPS以及延迟测量
+		fmt.Println("-----------Start Measuring----------")
+		go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
 
-	var newclient1 EthClient
-	var newclient2 EthClient
-	//在跨链测试时需要开一个新的client在另一条链进行监测
-	newclient1, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-	newclient1.transfer_type = "CrossChain"
-	//开始TPS以及延迟测量
-	fmt.Println("-----------Start Measuring----------")
-	go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
-
-	newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-	newclient2.transfer_type = "InChain"
-	//开始TPS以及延迟测量
-	fmt.Println("-----------Start Measuring----------")
-	if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
-		fmt.Println("err StartTPSMeasuring:", err)
-		logger.Fatal("err StartTPSMeasuring: ", err)
+		newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient2.transfer_type = "InChain"
+		//开始TPS以及延迟测量
+		fmt.Println("-----------Start Measuring----------")
+		if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
+			fmt.Println("err StartTPSMeasuring:", err)
+			logger.Fatal("err StartTPSMeasuring: ", err)
+		}
+	} else {
+		time.Sleep(mesuringDuration * 2)
 	}
 
 }

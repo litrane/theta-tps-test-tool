@@ -1,30 +1,37 @@
+
+ -o "ProxyCommand=nc -X connect -x 172.24.240.1:7890 %h %p"
+./tpsclient 3 CrossChain 360001 0
 success 0X10217E29FE3B97EA721ED831E02EBECB52F5C19B10
 0x10217e29fe3B97Ea721ED831e02EBEcb52f5C19b
 chukuai 997.028618ms
 chukuai 1.00499184s
 {
-                "data": "v/TEGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYFJAAAAAAAAAAAAAAAAR8XkCJC85KRzpJ11AYCLljPyl4IAAAAAAAAAAAAAAAASnG2mWdMOvD1B42wpQL9dA78J4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB",
-                "from": {
-                    "address": "0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1",
-                    "coins": {
-                        "tfuelwei": "10000000000000000000",
-                        "thetawei": "0"
-                    },
-                    "sequence": "9",
-                    "signature": "0x9dcfe0cfe45010932b4da7bd219d85fba5b989d111411c7bdfa0d3a3f07571f12bb4bb00a51bf6f9db7462722ff4cad201c3836c747d7e05f512512b40db1c871c"
-                },
-                "gas_limit": "3000000",
-                "gas_price": "4000000000000",
-                "to": {
-                    "address": "0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d",
-                    "coins": {
-                        "tfuelwei": "0",
-                        "thetawei": "0"
-                    }
-                }
-            }
-["address": "0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1" 0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1]
-["address": "0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d" 0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d]
+    "data": "v/TEGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYFJAAAAAAAAAAAAAAAAR8XkCJC85KRzpJ11AYCLljPyl4IAAAAAAAAAAAAAAAASnG2mWdMOvD1B42wpQL9dA78J4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB",
+    "from": {
+        "address": "0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1",
+        "coins": {
+            "tfuelwei": "10000000000000000000",
+            "thetawei": "0"
+        },
+        "sequence": "9",
+        "signature": "0x9dcfe0cfe45010932b4da7bd219d85fba5b989d111411c7bdfa0d3a3f07571f12bb4bb00a51bf6f9db7462722ff4cad201c3836c747d7e05f512512b40db1c871c"
+    },
+    "gas_limit": "3000000",
+    "gas_price": "4000000000000",
+    "to": {
+        "address": "0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d",
+        "coins": {
+            "tfuelwei": "0",
+            "thetawei": "0"
+        }
+    }
+}
+[
+    "address": "0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1"0x129c6da659d30ebc3d41e36c2940bf5d03bf09e1
+]
+[
+    "address": "0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d"0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d
+]
 find! 0X129C6DA659D30EBC3D41E36C2940BF5D03BF09E19
 unfind! 9
 chukuai 1.002389416s
