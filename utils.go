@@ -126,7 +126,7 @@ func transfer_token(fromAddress, toAddress common.Address, c EthClient, nonce in
 		Inputs:  inputs,
 		Outputs: outputs,
 	}
-	sig, err := thetaPrivateKey.Sign(sendTx.SignBytes("tsub360001")) //privatenet,testnet,tsub360777
+	sig, err := thetaPrivateKey.Sign(sendTx.SignBytes("tsub360777")) //privatenet,testnet,tsub360777,tsub360001
 	if err != nil {
 		log.Fatalln("Failed to sign transaction: %v\n", err)
 	}
