@@ -160,7 +160,7 @@ func main() {
 		//在跨链测试时需要开一个新的client在另一条链进行监测
 		// newclient, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc")
 		// newclient, err = NewClient("http://128.110.96.161:16888/rpc", "http://128.110.96.161:18888/rpc")
-		newclient, err = NewClient("http://128.110.96.107:16900/rpc", "http://128.110.96.107:19888/rpc") //改真实ip
+		newclient, err = NewClient("http://128.110.96.147:16900/rpc", "http://128.110.96.147:19888/rpc") //改真实ip
 		// subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 	} else {
 		//否则就用第一个client监测
