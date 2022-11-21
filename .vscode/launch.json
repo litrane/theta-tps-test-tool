@@ -12,9 +12,9 @@
             "program": "${workspaceRoot}",
             "cwd": "${workspaceRoot}",
             "args": [
-                "15",
+                "0",
                 "CrossChain",
-                "360001",
+                "366",
                 "0",
             ]
         }

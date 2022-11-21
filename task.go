@@ -44,7 +44,8 @@ func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce 
 	if t.transfer_type == "CrossChain" {
 		_, rootErr = client.CrossChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1) //链间交易
 	} else if t.transfer_type == "InChain" {
-		_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1) //链内TNT20
+		//_, rootErr = client.CrossSubChainTNT20Transfer(ctx, priv, nonce, t.to, t.amount, contractAddress, 1) //链内TNT20
+		_, rootErr = client.Erc20TransferFrom(ctx, priv, nonce, t.to, t.amount, contractAddress, 1)
 	} else {
 		logger.Fatal("err model")
 	}

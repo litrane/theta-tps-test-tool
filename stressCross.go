@@ -231,25 +231,25 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 			if queue.CountTasks() > queueSize {
 				continue
 			}
-			if count == 10000 {
-				fmt.Println("have send 1000")
-				break
-			}
-			// if count%crossPercentage == 0 {
-			// 	queue.Push(&EthTask{
-			// 		to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-			// 		amount:        1,
-			// 		tokenId:       int64(count),
-			// 		transfer_type: "CrossChain",
-			// 	})
-			// } else {
-			queue.Push(&EthTask{
-				to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-				amount:        1,
-				tokenId:       int64(count),
-				transfer_type: "InChain",
-			})
+			// if count == 10000 {
+			// 	fmt.Println("have send 1000")
+			// 	break
 			// }
+			if count%crossPercentage == 0 {
+				queue.Push(&EthTask{
+					to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+					amount:        1,
+					tokenId:       int64(count),
+					transfer_type: "CrossChain",
+				})
+			} else {
+				queue.Push(&EthTask{
+					to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+					amount:        1,
+					tokenId:       int64(count),
+					transfer_type: "InChain",
+				})
+			}
 			count++
 		}
 	}()
