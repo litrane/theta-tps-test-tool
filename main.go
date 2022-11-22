@@ -23,8 +23,8 @@ const (
 var (
 	//ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
 	//EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
-	ThetaRpc         = []string{"http://128.110.96.97:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc"}
-	EthRpc           = []string{"http://128.110.96.97:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
+	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc"}
+	EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
@@ -125,7 +125,7 @@ func main() {
 		var newclient1 EthClient
 		//var newclient2 EthClient
 		//在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient1, err = NewClient("http://128.110.96.97:16888/rpc", "http://128.110.96.97:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient1, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 		newclient1.transfer_type = "CrossChain"
 		//开始TPS以及延迟测量
 		fmt.Println("-----------Start Measuring----------")

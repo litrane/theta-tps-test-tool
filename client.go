@@ -349,13 +349,13 @@ func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce 
 		log.Fatal(err)
 	}
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("error casting public key to ECDSA")
-	}
+	//publicKey := privateKey.Public()
+	//publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	//if !ok {
+	////	log.Fatal("error casting public key to ECDSA")
+	//}
 
-	fromAddress := pubkeyToAddress(*publicKeyECDSA)
+	//fromAddress := pubkeyToAddress(*publicKeyECDSA)
 	erc20Instance, err := ct.NewTNT20VoucherContract(common.HexToAddress(erc721address), c.client)
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
@@ -366,7 +366,7 @@ func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce 
 	//nonce, err = c.client.PendingNonceAt(context.Background(), fromAddress)
 	// address
 	toAddress := common.HexToAddress(to)
-
+	chainID, _ = c.client.ChainID(ctx)
 	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
 	if err != nil {
 		log.Fatal(err)
@@ -376,9 +376,11 @@ func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce 
 	// auth.Value = big.NewInt(20000000000000000000) // in wei
 	auth.GasLimit = uint64(3000000) // in units
 	auth.GasPrice = &gasPrice
+	//fmt.Println(fromAddress.Hex())
+	//res, err := erc20Instance.TransferFrom(auth, fromAddress, toAddress, big.NewInt(int64(tokenAmount)))
 
-	res, err := erc20Instance.TransferFrom(auth, fromAddress, toAddress, big.NewInt(int64(tokenAmount)))
-
+	res, err := erc20Instance.Transfer(auth, toAddress, big.NewInt(int64(tokenAmount)))
+	//fmt.Println(res.Hash().Hex())
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
