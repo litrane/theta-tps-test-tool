@@ -21,10 +21,10 @@ const (
 )
 
 var (
-	//ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
-	//EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
-	ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc"}
-	EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
+	ThetaRpc         = []string{"http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc", "http://127.0.0.1:16900/rpc"}
+	EthRpc           = []string{"http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc", "http://127.0.0.1:19888/rpc"} // testnet
+	//ThetaRpc         = []string{"http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc", "http://127.0.0.1:16888/rpc"}
+	//EthRpc           = []string{"http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc", "http://127.0.0.1:18888/rpc"} // testnet
 	Timeout          = 15 * time.Second
 	MaxConcurrency   = runtime.NumCPU()
 	mesuringDuration = 120 * time.Second //执行数据时间
@@ -56,7 +56,7 @@ var (
 	model = "CrossChainTNT20" //压测类型
 
 	addr_priv        = make(map[string]string, len(privs))
-	erc721address    = "0x2D698bf9737a17696c980f6997dB9d13b35a12f8" //"0x2D698bf9737a17696c980f6997dB9d13b35a12f8" //"0x47c5e40890bcE4a473A49D7501808b9633F29782"
+	erc721address    = "0x47c5e40890bcE4a473A49D7501808b9633F29782" //"0x2D698bf9737a17696c980f6997dB9d13b35a12f8" //"0x47c5e40890bcE4a473A49D7501808b9633F29782"
 	client           EthClient
 	txMap            map[string]time.Time
 	txMap2           map[string]time.Time
@@ -71,7 +71,7 @@ var (
 	txMapCrossChain  map[string]time.Time
 	client_number    = 16
 	clientID         int
-	crossPercentage  = 1000000
+	crossPercentage  = 10
 	interval         int
 )
 
@@ -123,22 +123,21 @@ func main() {
 	crossSubChainTNT20StressTest(&client_list, ctx)
 	if clientID == 0 {
 		var newclient1 EthClient
-		//var newclient2 EthClient
+		var newclient2 EthClient
 		//在跨链测试时需要开一个新的client在另一条链进行监测
 		newclient1, err = NewClient("http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 		newclient1.transfer_type = "CrossChain"
 		//开始TPS以及延迟测量
 		fmt.Println("-----------Start Measuring----------")
-		//go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
-		tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
-		// newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-		// newclient2.transfer_type = "InChain"
-		// //开始TPS以及延迟测量
-		// fmt.Println("-----------Start Measuring----------")
-		// if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
-		// 	fmt.Println("err StartTPSMeasuring:", err)
-		// 	logger.Fatal("err StartTPSMeasuring: ", err)
-		// }
+		go tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
+		newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient2.transfer_type = "InChain"
+		//开始TPS以及延迟测量
+		fmt.Println("-----------Start Measuring----------")
+		if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
+			fmt.Println("err StartTPSMeasuring:", err)
+			logger.Fatal("err StartTPSMeasuring: ", err)
+		}
 	} else {
 		time.Sleep(mesuringDuration * 2)
 	}
