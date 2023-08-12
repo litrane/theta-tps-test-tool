@@ -82,18 +82,22 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 	var objmap map[string]json.RawMessage
 	var elapsedTime time.Duration
 	json.Unmarshal(jsonBytes, &objmap)
+	//fmt.Println("length is", len(trpcResult.Txs))
+	//fmt.Println(objmap)
 	if objmap["transactions"] != nil {
 		var txmaps []map[string]json.RawMessage
 		json.Unmarshal(objmap["transactions"], &txmaps)
+		fmt.Println("length is", len(txmaps))
 		for i, value := range txmaps {
 			if types.TxType(trpcResult.Txs[i].Type) == types.TxSmartContract {
 				if transfer_type == "CrossChain" {
 					var test RPCResult
 
 					json.Unmarshal(value["receipt"], &test)
+					fmt.Println(string(value["receipt"]))
 					if len(test.Result) != 0 {
-						result += 1
-						//fmt.Println(string(value["receipt"]))
+						result += len(test.Result)
+						fmt.Println(string(value["receipt"]))
 					}
 
 				} else if transfer_type == "InChain" {
@@ -115,11 +119,12 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 	if result != 0 {
 		avgLatency = elapsedTime / time.Duration(result)
 	}
-	//fmt.Println(avgLatency)
+	//fmt.Println("has", result)
 	return result, avgLatency, nil
 }
 func (c EthClient) CountTx(ctx context.Context, height uint64) (int, time.Duration, error) {
 	//startTime := time.Now()
+	//println("height is", height)
 	rpcResult, err := c.rpcClient.Call("theta.GetBlockByHeight", rpc.GetBlockByHeightArgs{
 		Height: common.JSONUint64(height)})
 	if err != nil {
@@ -449,12 +454,14 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// if err != nil {
 	// 	return common.BytesToHash([]byte("")), err
 	// }
+	//fmt.Println("already send ")
 	res, err := erc20TokenBank.LockTokens(auth, big.NewInt(366), subchainTNT20Address, fromAddress, big.NewInt(1))
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
 	}
 
-	//time.Sleep(1 * time.Millisecond)
+	// time.Sleep(1 * time.Millisecond)
+	fmt.Println("already send ")
 	// receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -485,7 +492,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 func (c EthClient) CrossSubChainTNT20Transfer(ctx context.Context, privHex string, nonce uint64, to string, value int64, contractAddress string, tokenAmount int) (common.Hash, error) {
 	//fmt.Println("privateKey", privHex)
 	//fmt.Println("send1", nonce+1, "send2", nonce+2)
-	time.Sleep(time.Duration(interval) * time.Millisecond)
+	//time.Sleep(time.Duration(interval) * time.Millisecond)
 	privateKey, err := crypto.HexToECDSA(privHex)
 	if err != nil {
 		log.Fatal(err)

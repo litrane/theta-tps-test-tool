@@ -53,18 +53,22 @@ func (t *EthTask) Do(ctx context.Context, client *EthClient, priv string, nonce 
 	if rootErr != nil { //根据错误捕捉，并返回错误类型
 		if strings.Contains(rootErr.Error(), "Invalid Transaction") {
 			//logger.Warn(fmt.Sprintf("nonce error, %s", rootErr.Error()))
+			logger.Fatal("err model")
 			return tps.ErrWrongNonce
 		}
 		if strings.Contains(rootErr.Error(), "Transaction already seen") {
 			//logger.Warn(fmt.Sprintf("nonce error, %s", rootErr.Error()))
+			logger.Fatal("err model")
 			return tps.ErrTaskRetry
 		}
 		if strings.Contains(rootErr.Error(), "ValidateInputAdvanced: Got") {
-
+			logger.Warn(fmt.Sprintf("nonce error, %s", rootErr.Error()))
+			logger.Fatal("err model")
 			return rootErr
 		}
 		logger.Warn(fmt.Sprintf("faild sending, err: %s", rootErr.Error()))
 		if err := t.IncrementTryCount(); err != nil {
+			logger.Fatal("err model")
 			return tps.ErrWrongNonce
 		}
 		// if strings.Contains(rootErr.Error(), "ValidateInputAdvanced:"){
