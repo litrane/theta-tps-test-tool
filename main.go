@@ -120,25 +120,26 @@ func main() {
 	//开始进行压测
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-
-	crossSubChainTNT20StressTest(&client_list, ctx)
+	if clientID != 0 {
+		crossSubChainTNT20StressTest(&client_list, ctx)
+	}
 	if clientID == 0 {
-		var newclient1 EthClient
-		//var newclient2 EthClient
+		//var newclient1 EthClient
+		var newclient2 EthClient
 		//在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient1, err = NewClient("http://10.10.1.1:16888/rpc", "http://10.10.1.9:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-		newclient1.transfer_type = "CrossChain"
+		//newclient1, err = NewClient("http://10.10.1.1:16888/rpc", "http://10.10.1.9:18888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		//newclient1.transfer_type = "CrossChain"
 		//开始TPS以及延迟测量
-		fmt.Println("-----------Start Measuring----------")
-		tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
-		// newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
-		// newclient2.transfer_type = "InChain"
+		//fmt.Println("-----------Start Measuring----------")
+		//tps.StartTPSMeasuring(context.Background(), &newclient1, &tpsClosing, &idlingDuration, logger, 1)
+		newclient2, err = NewClient("http://127.0.0.1:16900/rpc", "http://127.0.0.1:19888/rpc") // subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
+		newclient2.transfer_type = "InChain"
 		// //开始TPS以及延迟测量
-		// fmt.Println("-----------Start Measuring----------")
-		// if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
-		// 	fmt.Println("err StartTPSMeasuring:", err)
-		// 	logger.Fatal("err StartTPSMeasuring: ", err)
-		// }
+		fmt.Println("-----------Start Measuring----------")
+		if err = tps.StartTPSMeasuring(context.Background(), &newclient2, &tpsClosing, &idlingDuration, logger, 2); err != nil {
+			fmt.Println("err StartTPSMeasuring:", err)
+			logger.Fatal("err StartTPSMeasuring: ", err)
+		}
 	} else {
 		time.Sleep(mesuringDuration)
 	}

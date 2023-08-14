@@ -63,7 +63,7 @@ func (c EthClient) LatestBlockHeight(ctx context.Context) (uint64, error) {
 	var height tcommon.JSONUint64
 	resultIntf, err := HandleThetaRPCResponse(rpcRes, rpcErr, parse)
 	height = resultIntf.(tcommon.JSONUint64)
-	result := uint64(height)
+	result := uint64(height) - 1
 	if err != nil {
 		return result, err
 	}
@@ -219,51 +219,51 @@ func (c *EthClient) getGasPriceSuggestion(ctx context.Context) big.Int {
 	// 	return big.Int{}
 	// }
 	// return *gasPrice
-	currentHeight, _ := c.LatestBlockHeight(ctx)
-	rpcRes, rpcErr := c.rpcClient.Call("theta.GetBlockByHeight", GetBlockByHeightArgs{Height: tcommon.JSONUint64(currentHeight)})
+	//currentHeight, _ := c.LatestBlockHeight(ctx)
+	// rpcRes, rpcErr := c.rpcClient.Call("theta.GetBlockByHeight", GetBlockByHeightArgs{Height: tcommon.JSONUint64(currentHeight)})
 
-	parse := func(jsonBytes []byte) (interface{}, error) {
-		trpcResult := ThetaGetBlockResult{}
-		json.Unmarshal(jsonBytes, &trpcResult)
-		var objmap map[string]json.RawMessage
-		json.Unmarshal(jsonBytes, &objmap)
-		if objmap["transactions"] != nil {
-			//TODO: handle other types
-			txs := []rpc.Tx{}
-			tmpTxs := []TxTmp{}
-			json.Unmarshal(objmap["transactions"], &tmpTxs)
-			for _, tx := range tmpTxs {
-				newTx := rpc.Tx{}
-				newTx.Type = tx.Type
-				newTx.Hash = tx.Hash
-				if types.TxType(tx.Type) == types.TxSmartContract {
-					transaction := types.SmartContractTx{}
-					json.Unmarshal(tx.Tx, &transaction)
-					// fmt.Printf("transaction: %+v\n", transaction)
-					newTx.Tx = &transaction
-				}
-				txs = append(txs, newTx)
-			}
-			trpcResult.Txs = txs
-		}
-		return trpcResult, nil
-	}
+	// parse := func(jsonBytes []byte) (interface{}, error) {
+	// 	trpcResult := ThetaGetBlockResult{}
+	// 	json.Unmarshal(jsonBytes, &trpcResult)
+	// 	var objmap map[string]json.RawMessage
+	// 	json.Unmarshal(jsonBytes, &objmap)
+	// 	if objmap["transactions"] != nil {
+	// 		//TODO: handle other types
+	// 		txs := []rpc.Tx{}
+	// 		tmpTxs := []TxTmp{}
+	// 		json.Unmarshal(objmap["transactions"], &tmpTxs)
+	// 		for _, tx := range tmpTxs {
+	// 			newTx := rpc.Tx{}
+	// 			newTx.Type = tx.Type
+	// 			newTx.Hash = tx.Hash
+	// 			if types.TxType(tx.Type) == types.TxSmartContract {
+	// 				transaction := types.SmartContractTx{}
+	// 				json.Unmarshal(tx.Tx, &transaction)
+	// 				// fmt.Printf("transaction: %+v\n", transaction)
+	// 				newTx.Tx = &transaction
+	// 			}
+	// 			txs = append(txs, newTx)
+	// 		}
+	// 		trpcResult.Txs = txs
+	// 	}
+	// 	return trpcResult, nil
+	// }
 
-	resultIntf, _ := HandleThetaRPCResponse(rpcRes, rpcErr, parse)
-	thetaGetBlockResult, _ := resultIntf.(ThetaGetBlockResult)
+	//resultIntf, _ := HandleThetaRPCResponse(rpcRes, rpcErr, parse)
+	//thetaGetBlockResult, _ := resultIntf.(ThetaGetBlockResult)
 
 	totalGasPrice := big.NewInt(0)
 	count := 0
-	for _, tx := range thetaGetBlockResult.Txs {
-		if types.TxType(tx.Type) != types.TxSmartContract {
-			continue
-		}
-		if tx.Tx != nil {
-			transaction := tx.Tx.(*types.SmartContractTx)
-			count++
-			totalGasPrice = new(big.Int).Add(transaction.GasPrice, totalGasPrice)
-		}
-	}
+	// for _, tx := range thetaGetBlockResult.Txs {
+	// 	if types.TxType(tx.Type) != types.TxSmartContract {
+	// 		continue
+	// 	}
+	// 	if tx.Tx != nil {
+	// 		transaction := tx.Tx.(*types.SmartContractTx)
+	// 		count++
+	// 		totalGasPrice = new(big.Int).Add(transaction.GasPrice, totalGasPrice)
+	// 	}
+	// }
 	gasPrice := big.NewInt(4000000000000)
 	if count != 0 {
 		gasPrice = new(big.Int).Div(totalGasPrice, big.NewInt(int64(count)))
@@ -461,7 +461,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	}
 
 	// time.Sleep(1 * time.Millisecond)
-	fmt.Println("already send ")
+	//fmt.Println("already send ")
 	// receipt, err := c.client.TransactionReceipt(context.Background(), res.Hash())
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -483,7 +483,7 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	//resolveNum := Resolve(receipt.Logs[2].Data)
 
 	CountNum += 1
-	if CountNum%10 == 0 {
+	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
 	}
 	return res.Hash(), nil

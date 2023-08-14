@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"sync/atomic"
-	"time"
 
 	"github.com/blockchain-tps-test/samples/theta/tps"
 	"github.com/pkg/errors"
@@ -232,11 +231,11 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 			if queue.CountTasks() > queueSize {
 				continue
 			}
-			// if count == 10000 {
-			// 	fmt.Println("have send 1000")
-			// 	break
-			// }
-			time.Sleep(time.Duration(interval) * time.Millisecond)
+			if count%100 == 0 {
+				fmt.Println("have send 100")
+
+			}
+			//time.Sleep(time.Duration(interval) * time.Millisecond)
 			//if count%crossPercentage == 0 {
 			queue.Push(&EthTask{
 				to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
