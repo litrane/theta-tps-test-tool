@@ -94,10 +94,10 @@ func parse(jsonBytes []byte, transfer_type string) (int, time.Duration, error) {
 					var test RPCResult
 
 					json.Unmarshal(value["receipt"], &test)
-					fmt.Println(string(value["receipt"]))
+					//fmt.Println(string(value["receipt"]))
 					if len(test.Result) != 0 {
 						result += len(test.Result)
-						fmt.Println(string(value["receipt"]))
+						//fmt.Println(string(value["receipt"]))
 					}
 
 				} else if transfer_type == "InChain" {
@@ -385,6 +385,7 @@ func (c EthClient) Erc20TransferFrom(ctx context.Context, privHex string, nonce 
 	//res, err := erc20Instance.TransferFrom(auth, fromAddress, toAddress, big.NewInt(int64(tokenAmount)))
 
 	res, err := erc20Instance.Transfer(auth, toAddress, big.NewInt(int64(tokenAmount)))
+	
 	//fmt.Println(res.Hash().Hex())
 	if err != nil {
 		return common.BytesToHash([]byte("")), err
@@ -482,9 +483,14 @@ func (c EthClient) CrossChainTNT20Transfer(ctx context.Context, privHex string, 
 	// fmt.Println(receipt.Logs[2].Data)
 	//resolveNum := Resolve(receipt.Logs[2].Data)
 
+	if CountNum == 0 {
+		startTime = time.Now()
+	}
 	CountNum += 1
 	if CountNum%100 == 0 {
 		fmt.Println("already send ", CountNum)
+		fmt.Println("send 100 txes use", time.Since(startTime))
+		startTime = time.Now()
 	}
 	return res.Hash(), nil
 }

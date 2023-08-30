@@ -31,9 +31,9 @@ def calculate_tx_num_sum(filename, start_height, end_height):
     return total_tx_num
 
 
-filename = 'output.log'
-start_height = 36
-end_height = 79
+filename = 'output1'
+start_height = 56
+end_height = 110
 sum_tx_num = calculate_tx_num_sum(filename, start_height, end_height)
 print(
     f"Sum of tx num from block.height {start_height} to {end_height}: {sum_tx_num}")
