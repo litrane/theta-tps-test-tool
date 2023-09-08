@@ -113,16 +113,17 @@ import (
 // 				continue
 // 			}
 
-// 			queue.Push(&EthTask{
-// 				to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-// 				amount:  1,
-// 				tokenId: int64(count),
-// 			})
-// 			count++
-// 		}
-// 	}()
-// }
-//下面的函数同理，因为要发送不同类型的交易所以需要不同的stress函数，但是可能可以合并成一个函数？这个工作还没有做，因为需要统一错误捕捉
+//				queue.Push(&EthTask{
+//					to:      "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+//					amount:  1,
+//					tokenId: int64(count),
+//				})
+//				count++
+//			}
+//		}()
+//	}
+//
+// 下面的函数同理，因为要发送不同类型的交易所以需要不同的stress函数，但是可能可以合并成一个函数？这个工作还没有做，因为需要统一错误捕捉
 func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 	privsGroup := [][]string{}
 	addrs := [][]string{}
@@ -233,27 +234,27 @@ func crossSubChainTNT20StressTest(client *[]EthClient, ctx context.Context) {
 				continue
 			}
 			if count%100 == 0 {
-				fmt.Println("have send 100")
+				fmt.Println("have sent ", count)
 
 			}
 			time.Sleep(time.Duration(interval) * time.Millisecond)
-			//if count%crossPercentage == 0 {
-			queue.Push(&EthTask{
-				to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-				amount:        1,
-				tokenId:       int64(count),
-				transfer_type: "CrossChain",
-			})
-			// } else {
-			// queue.Push(&EthTask{
-			// 	to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
-			// 	amount:        1,
-			// 	tokenId:       int64(count),
-			// 	transfer_type: "InChain",
-			// })
-			// }
+			if count%crossPercentage == 0 {
+				queue.Push(&EthTask{
+					to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+					amount:        1,
+					tokenId:       int64(count),
+					transfer_type: "CrossChain",
+				})
+			} else {
+				queue.Push(&EthTask{
+					to:            "0x27F6F1bb3e2977c3CB014e7d4B5639bB133A6032",
+					amount:        1,
+					tokenId:       int64(count),
+					transfer_type: "InChain",
+				})
+			}
 
-			//count++
+			count++
 		}
 	}()
 }

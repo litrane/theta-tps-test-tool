@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync/atomic"
-	"time"
 )
 
 var (
@@ -46,12 +45,12 @@ func (w *Worker) Run(queue *Queue, id int) {
 		if isEmpty {
 			continue
 		}
-		startTime := time.Now()
+		// startTime := time.Now()
 		if err := w.doTaskFunc(task, id); err != nil {
 			log.Fatal("err doTaskFunc", err)
 		}
-		endTime := time.Since(startTime)
-		fmt.Println("task cost", endTime)
+		// endTime := time.Since(startTime)
+		// fmt.Println("task cost", endTime)
 	}
 	defer fmt.Println(id, " is done")
 }

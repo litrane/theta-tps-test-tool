@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDuration *uint32, logger Logger,id int) error {
+func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDuration *uint32, logger Logger, id int) error {
 	var (
 		idling      = true
 		startedAd   time.Time
@@ -67,10 +67,10 @@ func StartTPSMeasuring(ctx context.Context, client Client, closing, idlingDurati
 		total += count
 		latency_num += 1
 		latency_sum.Add(big.NewInt(int64(avg_latency)), latency_sum)
-		elapsed := time.Now().Sub(startedAd).Seconds()
+		elapsed := time.Since(startedAd).Seconds()
 		latency_time := time.Duration(big.NewInt(0).Div(latency_sum, big.NewInt(int64(latency_num))).Int64())
-		fmt.Print("-------------------------------------",id,"-----------------------------------------------\n")
-		fmt.Printf("⛓  %d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%dms)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, latency_time)
+		fmt.Print("-------------------------------------", id, "-----------------------------------------------\n")
+		fmt.Printf("%d th Block Mind! txs(%d), total txs(%d), TPS(%.2f), pendig txs(%d),latency(%dms)\n", lastBlock, count, total, float64(total)/elapsed, pendingTx, latency_time)
 	}
 
 	return nil
