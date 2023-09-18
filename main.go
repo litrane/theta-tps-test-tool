@@ -126,7 +126,7 @@ func main() {
 		// 主链不需要起压测，只需要观测主链即可
 		var newclient1 EthClient
 		// 在跨链测试时需要开一个新的client在另一条链进行监测
-		newclient1, _ = NewClient("http://10.10.1.1:16888/rpc", "http://10.10.1.1:18888/rpc")
+		newclient1, _ = NewClient("http://172.25.149.104:16888/rpc", "http://172.25.149.104:18888/rpc")
 		// subchain 16900 19888 sidechain "http://127.0.0.1:17900/rpc", "http://127.0.0.1:19988/rpc" mainchain "http://127.0.0.1:16888/rpc", "http://127.0.0.1:18888/rpc"
 		newclient1.transfer_type = "CrossChain"
 		//开始TPS以及延迟测量

@@ -10,13 +10,13 @@ replace github.com/thetatoken/theta/rpc/lib/rpc-codec/jsonrpc2 v0.0.0 => ../thet
 
 replace github.com/thetatoken/thetasubchain v0.0.0 => ../thetatoken/thetasubchain
 
-replace github.com/thetatoken/theta-eth-rpc-adaptor v0.0.0 => ../thetatoken/theta-eth-rpc-adaptor
+// replace github.com/thetatoken/theta-eth-rpc-adaptor v0.0.0 => ../thetatoken/theta-eth-rpc-adaptor
 
 require (
 	github.com/pkg/errors v0.9.1
 	github.com/tak1827/blockchain-tps-test v0.0.0-20211222012211-ccf815f0ae32
 	github.com/thetatoken/theta v0.0.0
-	github.com/thetatoken/theta-eth-rpc-adaptor v0.0.0
+	// github.com/thetatoken/theta-eth-rpc-adaptor v0.0.0
 	github.com/thetatoken/theta/common v0.0.0
 	github.com/thetatoken/thetasubchain v0.0.0
 	github.com/ybbus/jsonrpc v1.1.1
